@@ -1,0 +1,79 @@
+name: Template update
+
+# Generates an instance from the most recent tag and applies the current state
+# of the template to it with cruft. This catches the failure mode that a plain
+# render cannot see: a change that renders cleanly but breaks existing
+# instances on update.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install tooling
+        run: pip install cruft pytest pyyaml
+
+      - name: Find the most recent tag
+        id: previous
+        run: |
+          TAG=$(git tag --sort=-v:refname | head -1)
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if [ -z "$TAG" ]; then
+            echo "No tag yet - nothing to update from."
+          fi
+
+      - name: Generate from the previous tag
+        if: steps.previous.outputs.tag != ''
+        # The same skip list the instances use (see README.md).
+        run: |
+          cruft create --no-input --checkout "${{ steps.previous.outputs.tag }}" \
+            --skip .env --skip secrets --skip certs --skip letsencrypt \
+            --skip logs --skip traefik/private \
+            --output-dir rendered "$GITHUB_WORKSPACE"
+          INSTANCE=$(find rendered -mindepth 1 -maxdepth 1 -type d | head -1)
+          echo "INSTANCE=$INSTANCE" >> "$GITHUB_ENV"
+
+      - name: Commit the generated state
+        if: steps.previous.outputs.tag != ''
+        working-directory: ${{ env.INSTANCE }}
+        # cruft refuses an unclean working tree, and only a git repository
+        # gets the three-way merge instead of reject files.
+        run: |
+          git init -q .
+          git config user.email ci@example.invalid
+          git config user.name CI
+          git add -A
+          git commit -qm "generated from ${{ steps.previous.outputs.tag }}"
+
+      - name: Apply the current template
+        if: steps.previous.outputs.tag != ''
+        working-directory: ${{ env.INSTANCE }}
+        run: |
+          cruft update --skip-apply-ask --checkout "$GITHUB_SHA"
+          if find . -name "*.rej" | grep -q .; then
+            echo "The update produced reject files:" >&2
+            find . -name "*.rej" -exec echo "  {}" \; >&2
+            exit 1
+          fi
+          git diff --stat
+
+      - name: The updated instance must still pass its checks
+        if: steps.previous.outputs.tag != ''
+        working-directory: ${{ env.INSTANCE }}
+        run: pytest -q tests

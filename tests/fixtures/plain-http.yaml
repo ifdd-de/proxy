@@ -1,0 +1,5 @@
+# Plain HTTP, no DoS baseline: the smallest configuration the template emits.
+default_context:
+  ifdd_proxy_prj_name: Plain Proxy
+  ifdd_proxy_enable_tls: "n"
+  ifdd_proxy_enable_dos_baseline: "n"

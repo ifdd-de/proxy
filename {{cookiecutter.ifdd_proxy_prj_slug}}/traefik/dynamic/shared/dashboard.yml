@@ -1,0 +1,13 @@
+# Authentication for the dashboard router (declared as labels on the proxy
+# service in the compose files).
+#
+# The users file is not part of the repository. Without it the middleware
+# cannot be built, Traefik unmounts the dashboard router and the dashboard
+# answers 404 instead of 401. See README.md, "First start".
+http:
+  middlewares:
+    dashboard-auth:
+      basicAuth:
+        usersFile: /etc/traefik/secrets/dashboard.htpasswd
+        # Do not forward the credentials to the (internal) dashboard service.
+        removeHeader: true

@@ -1,0 +1,11 @@
+# Let's Encrypt (staging) behind a trusted upstream proxy, socket proxy on,
+# TLS 1.2 allowed, aliasing headers rejected instead of dropped.
+default_context:
+  ifdd_proxy_prj_name: Edge Proxy
+  ifdd_proxy_enable_letsencrypt: "y"
+  ifdd_proxy_letsencrypt_email: "ops@example.org"
+  ifdd_proxy_letsencrypt_staging: "y"
+  ifdd_proxy_enable_socket_proxy: "y"
+  ifdd_proxy_trusted_ips: "10.0.0.0/8, 192.168.1.7"
+  ifdd_proxy_tls_min_version: VersionTLS12
+  ifdd_proxy_alias_headers_strategy: reject

@@ -1,0 +1,137 @@
+# Static (install) configuration of {{ cookiecutter.ifdd_proxy_prj_name }}, local development.
+#
+# Differs from traefik.yml in three points only: no Let's Encrypt (Traefik
+# serves its own self-signed default certificate instead), log level INFO,
+# and the dynamic configuration comes from traefik/dynamic/development.
+#
+# Rendered by cookiecutter from the ifdd-de/proxy template. Traefik takes its
+# static configuration from exactly one source. This file is that source, so
+# the container gets no --flags besides --configFile and no TRAEFIK_*
+# environment variables.
+{%- set tls = cookiecutter.ifdd_proxy_enable_tls == "y" %}
+{%- set le = false %}
+{%- set dos = cookiecutter.ifdd_proxy_enable_dos_baseline == "y" %}
+{%- set trusted = cookiecutter.ifdd_proxy_trusted_ips.split(",") | map("trim") | select | list %}
+
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+log:
+  level: INFO
+
+accessLog:
+  filePath: /var/log/traefik/access.log
+  bufferingSize: 500
+
+api:
+  dashboard: true
+  # The dashboard is reachable only through the authenticated router declared
+  # in the compose file. insecure would additionally serve it without any
+  # authentication on port 8080 to every container in the proxy network.
+  insecure: false
+
+ping:
+  # Loopback only: the container health check reaches it, nothing else does.
+  entryPoint: ping
+
+core:
+  # Two routers asking for different TLS options on the same host name would
+  # otherwise silently fall back to the default options. Fail closed instead.
+  strictTLSOptions: true
+
+entryPoints:
+  web:
+    address: ":80"
+{%- if not tls %}
+    asDefault: true
+{%- endif %}
+{%- if trusted %}
+    forwardedHeaders:
+      trustedIPs:
+{%- for ip in trusted %}
+        - "{{ ip }}"
+{%- endfor %}
+{%- endif %}
+    http:
+      aliasHeadersStrategy: {{ cookiecutter.ifdd_proxy_alias_headers_strategy }}
+{%- if tls %}
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+{%- elif dos %}
+      maxHeaderBytes: {{ cookiecutter.ifdd_proxy_dos_max_header_bytes }}
+      middlewares:
+        - dos-baseline@file
+{%- endif %}
+{%- if dos and not tls %}
+    http2:
+      maxConcurrentStreams: {{ cookiecutter.ifdd_proxy_dos_h2_max_streams }}
+    transport:
+      respondingTimeouts:
+        readTimeout: "{{ cookiecutter.ifdd_proxy_dos_read_timeout }}"
+        writeTimeout: "{{ cookiecutter.ifdd_proxy_dos_write_timeout }}"
+        idleTimeout: "{{ cookiecutter.ifdd_proxy_dos_idle_timeout }}"
+{%- endif %}
+{%- if tls %}
+
+  websecure:
+    address: ":443"
+    # Routers that name no entry point attach here, so services behind the
+    # proxy need no entrypoints label.
+    asDefault: true
+{%- if trusted %}
+    forwardedHeaders:
+      trustedIPs:
+{%- for ip in trusted %}
+        - "{{ ip }}"
+{%- endfor %}
+{%- endif %}
+    http:
+      aliasHeadersStrategy: {{ cookiecutter.ifdd_proxy_alias_headers_strategy }}
+      # Applies to every router on this entry point that declares no tls
+      # section of its own. A router that does (even just tls=true) replaces
+      # this block entirely, so services must not set router tls labels.
+{%- if le %}
+      tls:
+        certResolver: letsencrypt
+{%- else %}
+      tls: {}
+{%- endif %}
+{%- if dos %}
+      maxHeaderBytes: {{ cookiecutter.ifdd_proxy_dos_max_header_bytes }}
+      middlewares:
+        - dos-baseline@file
+    http2:
+      maxConcurrentStreams: {{ cookiecutter.ifdd_proxy_dos_h2_max_streams }}
+    transport:
+      respondingTimeouts:
+        readTimeout: "{{ cookiecutter.ifdd_proxy_dos_read_timeout }}"
+        writeTimeout: "{{ cookiecutter.ifdd_proxy_dos_write_timeout }}"
+        idleTimeout: "{{ cookiecutter.ifdd_proxy_dos_idle_timeout }}"
+{%- endif %}
+{%- endif %}
+
+  ping:
+    address: "127.0.0.1:8082"
+    http:
+      aliasHeadersStrategy: {{ cookiecutter.ifdd_proxy_alias_headers_strategy }}
+
+providers:
+  docker:
+{%- if cookiecutter.ifdd_proxy_enable_socket_proxy == "y" %}
+    # Read-only access through the socket proxy instead of the raw socket.
+    endpoint: "tcp://socket-proxy:2375"
+{%- else %}
+    endpoint: "unix:///var/run/docker.sock"
+{%- endif %}
+    exposedByDefault: false
+    network: {{ cookiecutter.ifdd_proxy_network }}
+  file:
+    # Loads every *.yml below this directory, subdirectories included.
+    directory: /etc/traefik/dynamic
+    # Observed with v3.7.13: only changes directly in this directory trigger
+    # a reload, not changes inside its subdirectories (where all mounts go).
+    # After editing dynamic configuration: docker compose restart proxy
+    watch: true

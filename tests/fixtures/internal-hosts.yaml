@@ -1,0 +1,4 @@
+default_context:
+  ifdd_proxy_prj_name: IFDD Proxy
+  ifdd_proxy_internal_hosts: "id, rest, ui, schema.example.org"
+  ifdd_proxy_dashboard_user: "ops.admin"

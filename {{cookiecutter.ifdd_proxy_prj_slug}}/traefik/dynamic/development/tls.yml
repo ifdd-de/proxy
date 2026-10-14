@@ -1,0 +1,10 @@
+# TLS options for local development.
+#
+# No certificates are configured, so Traefik serves its generated self-signed
+# default certificate. That certificate matches no host name, which is why
+# sniStrict has to stay off here - with it on, every handshake would fail.
+tls:
+  options:
+    default:
+      minVersion: {{ cookiecutter.ifdd_proxy_tls_min_version }}
+      sniStrict: false

@@ -1,0 +1,3 @@
+default_context:
+  ifdd_proxy_prj_name: IFDD Proxy
+  ifdd_proxy_enable_security_headers: "n"

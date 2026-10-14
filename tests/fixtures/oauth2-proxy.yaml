@@ -1,0 +1,6 @@
+default_context:
+  ifdd_proxy_prj_name: IFDD Proxy
+  ifdd_proxy_enable_oauth2_proxy: "y"
+  ifdd_proxy_oidc_issuer: https://keycloak.example.org/realms/ifdd
+  ifdd_proxy_oidc_client_id: ifdd-proxy
+  ifdd_proxy_oauth2_proxy_ca_file: ca.crt

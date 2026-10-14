@@ -1,0 +1,100 @@
+{%- set tls = cookiecutter.ifdd_proxy_enable_tls == "y" -%}
+{%- set le = false -%}
+{%- set socket_proxy = cookiecutter.ifdd_proxy_enable_socket_proxy == "y" -%}
+{%- set internal_hosts = cookiecutter.ifdd_proxy_internal_hosts.split(",") | map("trim") | reject("equalto", "") | list -%}
+# Local development. Traefik serves its own self-signed default certificate,
+# so browsers warn and no certificate matches a host name. Private keys,
+# Let's Encrypt and traefik/private are not used here.
+services:
+  proxy:
+    image: "traefik:{{ cookiecutter.ifdd_proxy_traefik_version }}"
+    # All static configuration is in traefik/traefik.development.yml. No env_file on
+    # purpose: Traefik reads TRAEFIK_* variables as configuration, so nothing
+    # from .env may reach this container. .env only feeds the ${...} below.
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`${IFDD_PROXY_DASHBOARD_HOST}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@file"
+    networks:
+{%- if internal_hosts %}
+      proxy:
+        # Containers on the shared network resolve these names to this proxy,
+        # so services call each other under their public URLs and with the
+        # proxy's certificate (ifdd_proxy_internal_hosts). Without an alias a
+        # container asks the host's resolver, which may answer 127.0.0.1.
+        aliases:
+{%- for host in internal_hosts %}
+          - "{{ host }}"
+{%- endfor %}
+{%- if socket_proxy %}
+      socket: {}
+{%- endif %}
+{%- else %}
+      - proxy
+{%- if socket_proxy %}
+      - socket
+{%- endif %}
+{%- endif %}
+    security_opt:
+      - "no-new-privileges:true"
+    ports:
+      - "${IFDD_PROXY_HTTP_PORT}:80"
+{%- if tls %}
+      - "${IFDD_PROXY_HTTPS_PORT}:443"
+{%- endif %}
+    volumes:
+{%- if not socket_proxy %}
+      # Read-only in name only: the Docker API behind the socket still accepts
+      # write requests. ifdd_proxy_enable_socket_proxy=y removes this mount.
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+{%- endif %}
+      - "./traefik/traefik.development.yml:/etc/traefik/traefik.yml:ro"
+      - "./traefik/dynamic/shared:/etc/traefik/dynamic/shared:ro"
+{%- if tls %}
+      - "./traefik/dynamic/development:/etc/traefik/dynamic/environment:ro"
+{%- endif %}
+      - "./secrets:/etc/traefik/secrets:ro"
+      - "./logs:/var/log/traefik"
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--configFile=/etc/traefik/traefik.yml"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+{%- if socket_proxy %}
+    depends_on:
+      - socket-proxy
+{%- endif %}
+    restart: unless-stopped
+{%- if socket_proxy %}
+
+  socket-proxy:
+    image: "{{ cookiecutter.ifdd_proxy_socket_proxy_image }}"
+    # Grants only what the Docker provider needs: list and inspect containers
+    # (CONTAINERS). EVENTS, PING and VERSION are granted by default; POST and
+    # everything else stays revoked, so the API is read-only.
+    environment:
+      CONTAINERS: 1
+    networks:
+      - socket
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    security_opt:
+      - "no-new-privileges:true"
+    restart: unless-stopped
+{%- endif %}
+
+networks:
+  proxy:
+    # Shared with every service behind the proxy, so no single compose
+    # project owns it. Create it once: docker network create {{ cookiecutter.ifdd_proxy_network }}
+    name: {{ cookiecutter.ifdd_proxy_network }}
+    external: true
+{%- if socket_proxy %}
+  socket:
+    # Only the proxy and the socket proxy are attached; no route outside.
+    internal: true
+{%- endif %}

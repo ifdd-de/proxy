@@ -1,0 +1,28 @@
+# TLS options for production.
+{%- set le = cookiecutter.ifdd_proxy_enable_letsencrypt == "y" %}
+{%- if not le %}
+#
+# The default certificate is served to clients whose server name matches no
+# other certificate. It is listed under certificates as well: with sniStrict
+# on, a certificate that is only the store default matches no server name and
+# every handshake fails (observed with Traefik v3.7.13).
+#
+# Further certificates are instance-specific and belong in
+# traefik/private/certificates.yml (see the .dist file there).
+{%- endif %}
+tls:
+  options:
+    default:
+      minVersion: {{ cookiecutter.ifdd_proxy_tls_min_version }}
+      # Refuse clients that send no server name or one no certificate covers.
+      sniStrict: true
+{%- if not le %}
+  certificates:
+    - certFile: /certs/{{ cookiecutter.ifdd_proxy_default_cert_file }}
+      keyFile: /certs/{{ cookiecutter.ifdd_proxy_default_key_file }}
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /certs/{{ cookiecutter.ifdd_proxy_default_cert_file }}
+        keyFile: /certs/{{ cookiecutter.ifdd_proxy_default_key_file }}
+{%- endif %}

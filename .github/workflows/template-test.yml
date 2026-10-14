@@ -1,0 +1,153 @@
+name: Template
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  render:
+    name: Render, check and start (${{ matrix.fixture }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture: [defaults, letsencrypt, plain-http, internal-hosts, no-headers]
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: template
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install tooling
+        run: pip install cookiecutter pytest pyyaml
+
+      - name: Render
+        run: |
+          cookiecutter --no-input --config-file template/tests/fixtures/${{ matrix.fixture }}.yaml \
+            --output-dir rendered template
+          INSTANCE=$(find rendered -mindepth 1 -maxdepth 1 -type d | head -1)
+          echo "INSTANCE=$INSTANCE" >> "$GITHUB_ENV"
+
+      - name: The rendered instance must contain no template placeholders
+        run: |
+          if grep -rl "cookiecutter\." "$INSTANCE"; then
+            echo "Unrendered placeholders found" >&2
+            exit 1
+          fi
+
+      - name: The configured internal host names arrive in the instance
+        run: python template/tests/check_internal_hosts.py template/tests/fixtures/${{ matrix.fixture }}.yaml "$INSTANCE"
+
+      - name: The generated dashboard password matches its htpasswd line
+        run: python template/tests/check_dashboard_credentials.py template/tests/fixtures/${{ matrix.fixture }}.yaml "$INSTANCE"
+
+      - name: The pre-generation hook rejects a dashboard user with a colon
+        run: |
+          if cookiecutter --no-input --output-dir rejected template ifdd_proxy_dashboard_user='a:b'; then
+            echo "Rendered although the user name contains a colon" >&2
+            exit 1
+          fi
+
+      - name: Static checks
+        working-directory: ${{ env.INSTANCE }}
+        run: pytest -q tests
+
+      - name: Documentation (docs/en, docs/de) matches and builds
+        run: |
+          pip install -r template/tests/docs/requirements.txt
+          python template/tests/check_docs.py "$INSTANCE" --prefix ifdd-proxy-
+
+      - name: Compose files are valid
+        working-directory: ${{ env.INSTANCE }}
+        run: |
+          docker compose -f docker-compose-production.yml config --quiet
+          docker compose -f docker-compose-development.yml config --quiet
+
+      - name: Smoke test, development
+        working-directory: ${{ env.INSTANCE }}
+        run: tests/smoke.sh development
+
+      - name: Smoke test, production
+        # Skips itself for Let's Encrypt; generates a throw-away certificate
+        # for own-certificate instances.
+        working-directory: ${{ env.INSTANCE }}
+        run: tests/smoke.sh production
+
+  oauth2-proxy:
+    # Rendered and checked, not started: without a reachable realm
+    # oauth2-proxy stops at start, so these fixtures are not smoke-tested.
+    name: Render and check (${{ matrix.fixture }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture: [oauth2-proxy, oauth2-proxy-public-ca]
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: template
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install tooling
+        run: pip install cookiecutter pytest pyyaml
+
+      - name: Render
+        run: |
+          cookiecutter --no-input --config-file template/tests/fixtures/${{ matrix.fixture }}.yaml \
+            --output-dir rendered template
+          INSTANCE=$(find rendered -mindepth 1 -maxdepth 1 -type d | head -1)
+          echo "INSTANCE=$INSTANCE" >> "$GITHUB_ENV"
+
+      - name: The rendered instance must contain no template placeholders
+        run: |
+          if grep -rl "cookiecutter\." "$INSTANCE"; then
+            echo "Unrendered placeholders found" >&2
+            exit 1
+          fi
+
+      - name: The configured CA file arrives in the instance
+        run: python template/tests/check_oauth2_proxy.py template/tests/fixtures/${{ matrix.fixture }}.yaml "$INSTANCE"
+
+      - name: The pre-generation hook rejects a distroless oauth2-proxy image
+        run: |
+          if cookiecutter --no-input --config-file template/tests/fixtures/${{ matrix.fixture }}.yaml \
+              --output-dir rejected template \
+              ifdd_proxy_oauth2_proxy_image=quay.io/oauth2-proxy/oauth2-proxy:v7.15.5; then
+            echo "Rendered although the image has no wget for the health check" >&2
+            exit 1
+          fi
+
+      - name: The generated dashboard password matches its htpasswd line
+        run: python template/tests/check_dashboard_credentials.py template/tests/fixtures/${{ matrix.fixture }}.yaml "$INSTANCE"
+
+      - name: Static checks
+        working-directory: ${{ env.INSTANCE }}
+        run: pytest -q tests
+
+      - name: Documentation (docs/en, docs/de) matches and builds
+        run: |
+          pip install -r template/tests/docs/requirements.txt
+          python template/tests/check_docs.py "$INSTANCE" --prefix ifdd-proxy-
+
+      - name: Compose files are valid
+        working-directory: ${{ env.INSTANCE }}
+        run: |
+          docker compose -f docker-compose-production.yml config --quiet
+          docker compose -f docker-compose-development.yml config --quiet

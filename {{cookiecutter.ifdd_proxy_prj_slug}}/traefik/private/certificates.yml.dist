@@ -1,0 +1,12 @@
+# Instance-specific certificates. Copy to certificates.yml and adjust.
+#
+# One entry per additional certificate/key pair in certs/. The default
+# certificate is already listed in traefik/dynamic/production/tls.yml and must
+# not be repeated here. Traefik picks the certificate whose SANs match the
+# server name the client asks for.
+#
+# This directory is on the cruft skip list: template updates never touch it.
+tls:
+  certificates:
+    - certFile: /certs/second.example.org.crt
+      keyFile: /certs/second.example.org.key

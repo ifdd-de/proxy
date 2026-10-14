@@ -1,0 +1,49 @@
+# Security response headers, attached per router by a label on each service
+# (…routers.<name>.middlewares). Rendered from cookiecutter; this file exists
+# only when ifdd_proxy_enable_security_headers is set.
+#
+# security-headers: applies to every service that references it. The CSP is
+# host-specific and therefore NOT here; a service adds one of the csp-*
+# middlewares below next to security-headers.
+http:
+  middlewares:
+    security-headers:
+      headers:
+        # Do not let the browser guess content types.
+        contentTypeNosniff: true
+        # Framing: allow same origin only.
+        customFrameOptionsValue: "{{ cookiecutter.ifdd_proxy_frame_options }}"
+        referrerPolicy: "{{ cookiecutter.ifdd_proxy_referrer_policy }}"
+        # Remove the upstream Server header (e.g. "uvicorn", "nginx").
+        customResponseHeaders:
+          Server: ""
+{%- if cookiecutter.ifdd_proxy_enable_hsts == "y" %}
+        # HSTS: only meaningful when every host is HTTPS-only. Sticks in the
+        # browser, so it is off by default.
+        stsSeconds: {{ cookiecutter.ifdd_proxy_hsts_seconds }}
+        stsIncludeSubdomains: true
+{%- endif %}
+
+    # Content-Security-Policy per kind of host. frame-ancestors complements the
+    # frame options above.
+    #
+    # csp-api: JSON APIs with no browser UI (schema/type/unit, keycloak token
+    # endpoints). Nothing is loaded, nothing is framed.
+    csp-api:
+      headers:
+        contentSecurityPolicy: "{{ cookiecutter.ifdd_proxy_csp_api }}"
+
+    # csp-api-docs: an API that also serves Swagger UI and ReDoc (the backend,
+    # /docs and /redoc of ifdd-be-core). Scripts and styles come from the host
+    # itself; connect-src must also name the realm origin ("Authorize" fetches
+    # the token there), ReDoc needs inline styles and blob: workers.
+    csp-api-docs:
+      headers:
+        contentSecurityPolicy: "{{ cookiecutter.ifdd_proxy_csp_api_docs }}"
+
+    # csp-ui: the react-admin frontend. Needs inline styles and data/blob
+    # images; kept as tight as react-admin 5 allows. Verify in the browser
+    # console and tighten.
+    csp-ui:
+      headers:
+        contentSecurityPolicy: "{{ cookiecutter.ifdd_proxy_csp_ui }}"

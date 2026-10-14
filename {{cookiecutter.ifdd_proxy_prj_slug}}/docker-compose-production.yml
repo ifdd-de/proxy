@@ -1,0 +1,189 @@
+{%- set tls = cookiecutter.ifdd_proxy_enable_tls == "y" -%}
+{%- set le = cookiecutter.ifdd_proxy_enable_letsencrypt == "y" -%}
+{%- set socket_proxy = cookiecutter.ifdd_proxy_enable_socket_proxy == "y" -%}
+{%- set internal_hosts = cookiecutter.ifdd_proxy_internal_hosts.split(",") | map("trim") | reject("equalto", "") | list -%}
+{%- set oauth2_proxy = cookiecutter.ifdd_proxy_enable_oauth2_proxy == "y" -%}
+services:
+  proxy:
+    image: "traefik:{{ cookiecutter.ifdd_proxy_traefik_version }}"
+    # All static configuration is in traefik/traefik.yml. No env_file on
+    # purpose: Traefik reads TRAEFIK_* variables as configuration, so nothing
+    # from .env may reach this container. .env only feeds the ${...} below.
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`${IFDD_PROXY_DASHBOARD_HOST}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@file"
+    networks:
+{%- if internal_hosts %}
+      proxy:
+        # Containers on the shared network resolve these names to this proxy,
+        # so services call each other under their public URLs and with the
+        # proxy's certificate (ifdd_proxy_internal_hosts). Without an alias a
+        # container asks the host's resolver, which may answer 127.0.0.1.
+        aliases:
+{%- for host in internal_hosts %}
+          - "{{ host }}"
+{%- endfor %}
+{%- if socket_proxy %}
+      socket: {}
+{%- endif %}
+{%- else %}
+      - proxy
+{%- if socket_proxy %}
+      - socket
+{%- endif %}
+{%- endif %}
+    security_opt:
+      - "no-new-privileges:true"
+    ports:
+      - "${IFDD_PROXY_HTTP_PORT}:80"
+{%- if tls %}
+      - "${IFDD_PROXY_HTTPS_PORT}:443"
+{%- endif %}
+    volumes:
+{%- if not socket_proxy %}
+      # Read-only in name only: the Docker API behind the socket still accepts
+      # write requests. ifdd_proxy_enable_socket_proxy=y removes this mount.
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+{%- endif %}
+      - "./traefik/traefik.yml:/etc/traefik/traefik.yml:ro"
+      - "./traefik/dynamic/shared:/etc/traefik/dynamic/shared:ro"
+{%- if tls %}
+      - "./traefik/dynamic/production:/etc/traefik/dynamic/environment:ro"
+{%- endif %}
+      - "./traefik/private:/etc/traefik/dynamic/private:ro"
+      - "./secrets:/etc/traefik/secrets:ro"
+{%- if tls and not le %}
+      - "./certs:/certs:ro"
+{%- endif %}
+{%- if le %}
+      - "./letsencrypt:/letsencrypt"
+{%- endif %}
+      - "./logs:/var/log/traefik"
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--configFile=/etc/traefik/traefik.yml"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+{%- if socket_proxy %}
+    depends_on:
+      - socket-proxy
+{%- endif %}
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: {{ cookiecutter.ifdd_proxy_memory_limit }}
+{%- if socket_proxy %}
+
+  socket-proxy:
+    image: "{{ cookiecutter.ifdd_proxy_socket_proxy_image }}"
+    # Grants only what the Docker provider needs: list and inspect containers
+    # (CONTAINERS). EVENTS, PING and VERSION are granted by default; POST and
+    # everything else stays revoked, so the API is read-only.
+    environment:
+      CONTAINERS: 1
+    networks:
+      - socket
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    security_opt:
+      - "no-new-privileges:true"
+    restart: always
+{%- endif %}
+
+{%- if oauth2_proxy %}
+
+  oauth2-proxy:
+    image: "{{ cookiecutter.ifdd_proxy_oauth2_proxy_image }}"
+    # Shared login gate for services behind this proxy (Keycloak, OIDC).
+    # A service opts in with a forwardAuth middleware on its own router:
+    #   address: http://oauth2-proxy:4180/?allowed_groups=<keycloak group>
+    # and a router Host(`<its host>`) && PathPrefix(`/oauth2/`) to the service
+    # oauth2-proxy@docker. Answers 202 for members of the group, sends
+    # everybody else to Keycloak (or 403). See README, "oauth2-proxy".
+    environment:
+      OAUTH2_PROXY_PROVIDER: "keycloak-oidc"
+      OAUTH2_PROXY_OIDC_ISSUER_URL: "${IFDD_PROXY_OIDC_ISSUER:?set in .env}"
+      OAUTH2_PROXY_CLIENT_ID: "${IFDD_PROXY_OIDC_CLIENT_ID:?set in .env}"
+      OAUTH2_PROXY_CLIENT_SECRET_FILE: "/run/secrets/oauth2_proxy_client_secret"
+      OAUTH2_PROXY_COOKIE_SECRET_FILE: "/run/secrets/oauth2_proxy_cookie_secret"
+      OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4180"
+      # Behind Traefik: take host and scheme from X-Forwarded-*, so one
+      # instance serves every host (redirect URL https://<host>/oauth2/callback).
+      OAUTH2_PROXY_REVERSE_PROXY: "true"
+      # Forward-auth mode: no upstream, only the decision.
+      OAUTH2_PROXY_UPSTREAMS: "static://202"
+      # Who may pass is decided per service by allowed_groups, not by e-mail.
+      OAUTH2_PROXY_EMAIL_DOMAINS: "*"
+      OAUTH2_PROXY_SCOPE: "openid email profile groups"
+      OAUTH2_PROXY_CODE_CHALLENGE_METHOD: "S256"
+      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "true"
+      OAUTH2_PROXY_COOKIE_SECURE: "true"
+      OAUTH2_PROXY_COOKIE_SAMESITE: "lax"
+      OAUTH2_PROXY_SILENCE_PING_LOGGING: "true"
+{%- if cookiecutter.ifdd_proxy_oauth2_proxy_ca_file %}
+      # oauth2-proxy calls the realm itself (discovery, token, keys); trust the
+      # CA that signed its certificate, and the public CAs as before.
+      OAUTH2_PROXY_PROVIDER_CA_FILES: "/certs/{{ cookiecutter.ifdd_proxy_oauth2_proxy_ca_file }}"
+      OAUTH2_PROXY_USE_SYSTEM_TRUST_STORE: "true"
+{%- endif %}
+    volumes:
+      - "./secrets/oauth2_proxy_client_secret:/run/secrets/oauth2_proxy_client_secret:ro"
+      - "./secrets/oauth2_proxy_cookie_secret:/run/secrets/oauth2_proxy_cookie_secret:ro"
+{%- if cookiecutter.ifdd_proxy_oauth2_proxy_ca_file %}
+      # Only the CA certificate, never certs/ itself: it holds the private
+      # keys. A missing file is an error instead of an empty directory.
+      - type: bind
+        source: "./certs/{{ cookiecutter.ifdd_proxy_oauth2_proxy_ca_file }}"
+        target: "/certs/{{ cookiecutter.ifdd_proxy_oauth2_proxy_ca_file }}"
+        read_only: true
+        bind:
+          create_host_path: false
+{%- endif %}
+    # The -alpine image brings busybox wget; the default image is distroless
+    # and has nothing a health check could run. oauth2-proxy stops when the
+    # realm is unreachable at start, so "healthy" means discovery succeeded.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4180/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.oauth2-proxy.loadbalancer.server.port=4180"
+      # Fallback route for the login callback on every host. Lowest priority:
+      # a service's own /oauth2/ router (see above) wins on its host. Also
+      # keeps Traefik from creating its default Host(`<container>`) router.
+      - "traefik.http.routers.oauth2-proxy.rule=PathPrefix(`/oauth2/`)"
+      - "traefik.http.routers.oauth2-proxy.priority=1"
+      - "traefik.http.routers.oauth2-proxy.entrypoints=websecure"
+      - "traefik.http.routers.oauth2-proxy.service=oauth2-proxy"
+    networks:
+      - proxy
+    read_only: true
+    security_opt:
+      - "no-new-privileges:true"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+{%- endif %}
+
+networks:
+  proxy:
+    # Shared with every service behind the proxy, so no single compose
+    # project owns it. Create it once: docker network create {{ cookiecutter.ifdd_proxy_network }}
+    name: {{ cookiecutter.ifdd_proxy_network }}
+    external: true
+{%- if socket_proxy %}
+  socket:
+    # Only the proxy and the socket proxy are attached; no route outside.
+    internal: true
+{%- endif %}

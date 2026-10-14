@@ -1,0 +1,65 @@
+# DoS baseline, attached to the public entry point in traefik.yml.
+#
+# THE NUMBERS BELOW ARE SYNTAX EXAMPLES, NOT RECOMMENDATIONS. They come from
+# cookiecutter variables whose defaults were never measured against a real
+# workload. Derive them from load tests of the services behind this proxy.
+{%- set trusted = cookiecutter.ifdd_proxy_trusted_ips.split(",") | map("trim") | select | list %}
+{%- set buffering = cookiecutter.ifdd_proxy_dos_enable_buffering == "y" %}
+#
+# Source of the client address:
+{%- if trusted %}
+#   A trusted proxy sits in front of Traefik (ifdd_proxy_trusted_ips), so the
+#   client is the right-most X-Forwarded-For entry (depth 1).
+{%- else %}
+#   No proxy in front of Traefik: the address of the TCP connection itself.
+#   X-Forwarded-For is deliberately NOT used, because any client can set it.
+{%- endif %}
+http:
+  middlewares:
+    dos-baseline:
+      chain:
+        middlewares:
+          - dos-ratelimit
+          - dos-inflight
+
+    # Requests per source over time (token bucket: average/period refills,
+    # burst is the bucket size). Answers 429 when exhausted.
+    dos-ratelimit:
+      rateLimit:
+        average: {{ cookiecutter.ifdd_proxy_dos_rate_average }}
+        period: "{{ cookiecutter.ifdd_proxy_dos_rate_period }}"
+        burst: {{ cookiecutter.ifdd_proxy_dos_rate_burst }}
+        sourceCriterion:
+          ipStrategy:
+{%- if trusted %}
+            depth: 1
+{%- endif %}
+            # Group IPv6 clients by prefix; a single host usually owns a whole
+            # /64 and could otherwise rotate addresses to escape the limit.
+            ipv6Subnet: {{ cookiecutter.ifdd_proxy_dos_ipv6_subnet }}
+
+    # Concurrent requests per source.
+    dos-inflight:
+      inFlightReq:
+        amount: {{ cookiecutter.ifdd_proxy_dos_inflight_amount }}
+        sourceCriterion:
+          ipStrategy:
+{%- if trusted %}
+            depth: 1
+{%- endif %}
+            ipv6Subnet: {{ cookiecutter.ifdd_proxy_dos_ipv6_subnet }}
+{%- if buffering %}
+
+    # Caps request bodies (413 above the limit). Buffers the whole request
+    # before forwarding it, which does not suit streaming uploads.
+    #
+    # OPT-IN PER ROUTER, deliberately not part of dos-baseline: attached to
+    # the entry point it also wraps the dashboard (api@internal), and with
+    # Traefik v3.7.13 every dashboard request then fails with a recovered
+    # panic ("invalid WriteHeader code 0"). Services that want it add
+    #   traefik.http.routers.<router>.middlewares=dos-buffering@file
+    dos-buffering:
+      buffering:
+        maxRequestBodyBytes: {{ cookiecutter.ifdd_proxy_dos_max_request_body_bytes }}
+        memRequestBodyBytes: {{ cookiecutter.ifdd_proxy_dos_mem_request_body_bytes }}
+{%- endif %}

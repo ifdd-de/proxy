@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  config:
+    name: Configuration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install
+        run: pip install -r tests/requirements.txt
+
+      - name: Static checks
+        run: pytest -q tests
+
+      - name: Compose files are valid
+        # .env is git-ignored; the distributed defaults are enough to validate.
+        run: |
+          cp dotenv.dist .env
+          docker compose -f docker-compose-production.yml config --quiet
+          docker compose -f docker-compose-development.yml config --quiet
+
+  smoke:
+    name: Smoke test (development)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Starts the real container with the Docker provider, then checks
+      # health, redirect and dashboard authentication from outside. The
+      # production variant needs certificates this repository does not hold.
+      - name: Start and probe
+        run: tests/smoke.sh development
+
+  template:
+    name: Template drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install cruft
+        run: pip install cruft
+
+      - name: Is this instance behind its template?
+        # Informational: being behind is a decision, not a failure.
+        continue-on-error: true
+        run: cruft check
+
+      - name: How far has this instance drifted from its template?
+        # Everything shown here is a backport candidate: it either belongs
+        # upstream in the template, or the file belongs on the skip list.
+        continue-on-error: true
+        run: cruft diff

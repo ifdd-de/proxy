@@ -1,0 +1,26 @@
+# Values for docker compose interpolation (the ${...} in the compose files).
+#
+# They are NOT passed into the container, and must not be: Traefik reads any
+# TRAEFIK_* variable in its environment as configuration. Keep the IFDD_PROXY_
+# prefix for everything added here.
+
+# Host name under which the dashboard is served (paths /dashboard and /api).
+IFDD_PROXY_DASHBOARD_HOST={{ cookiecutter.ifdd_proxy_host }}
+
+# Dashboard login, for reading only: Traefik checks secrets/dashboard.htpasswd.
+# The post-generation hook generates the password and writes the matching
+# line there. To change it, see secrets/README.md.
+IFDD_PROXY_DASHBOARD_USER={{ cookiecutter.ifdd_proxy_dashboard_user }}
+IFDD_PROXY_DASHBOARD_PASSWORD=
+
+# Host ports. The HTTP-01 challenge of Let's Encrypt needs port 80 to be
+# reachable from the internet.
+IFDD_PROXY_HTTP_PORT={{ cookiecutter.ifdd_proxy_port }}
+IFDD_PROXY_HTTPS_PORT={{ cookiecutter.ifdd_proxy_tls_port }}
+{%- if cookiecutter.ifdd_proxy_enable_oauth2_proxy == "y" %}
+
+# oauth2-proxy: Keycloak realm (issuer URL, no trailing slash) and its client.
+# Client secret: secrets/oauth2_proxy_client_secret (from Keycloak).
+IFDD_PROXY_OIDC_ISSUER={{ cookiecutter.ifdd_proxy_oidc_issuer }}
+IFDD_PROXY_OIDC_CLIENT_ID={{ cookiecutter.ifdd_proxy_oidc_client_id }}
+{%- endif %}

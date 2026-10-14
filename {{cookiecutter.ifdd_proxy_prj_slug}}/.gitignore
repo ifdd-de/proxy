@@ -1,0 +1,18 @@
+# Private keys and certificates. Only the placeholder is versioned.
+certs/*
+!certs/.gitkeep
+
+# Dashboard credentials. Only the README is versioned.
+secrets/*
+!secrets/README.md
+
+# ACME account and certificates, including their private keys.
+letsencrypt/*
+!letsencrypt/.gitkeep
+
+# Access log.
+logs/*
+!logs/.gitkeep
+
+# Local builds of the documentation (docs/en, docs/de)
+docs/_build/
