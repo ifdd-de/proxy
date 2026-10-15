@@ -1,0 +1,18 @@
+# Dependabot version updates for proxy.
+# Security updates are a repository setting and do not depend on this file.
+#
+# Not covered on purpose:
+# - image versions in cookiecutter.json (rendered into the compose files);
+# - tests/docs/requirements.txt (pinned together for the docs check);
+# - workflows of the rendered instance ({{cookiecutter.ifdd_proxy_prj_slug}}/.github/workflows):
+#   not yet verified that Dependabot scans them there.
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
