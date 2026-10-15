@@ -21,6 +21,10 @@ The version scheme follows the other IFDD templates: `YY.MM.N`.
   the default cannot know it, `cookiecutter_all.yaml` sets it. Comment in
   `headers.yml` and the instance README updated. Existing instances get the
   value with `cruft update --variables-to-update`.
+- Smoke test, production: the names of the throw-away certificate and key are
+  read from `tls.yml` once each. `tls.yml` names every file twice, so the key
+  name held two lines; the key was written under a name with a line break,
+  Traefik found no key and every TLS check failed (`000`).
 
 - README, security headers: `csp-ui` must also allow the type and unit
   services in `connect-src` (the UI reads vocabularies and units there). The
