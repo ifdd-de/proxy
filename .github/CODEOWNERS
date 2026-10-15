@@ -1,0 +1,9 @@
+*                   @ifdd-de/maintainers
+
+.github/            @ifdd-de/maintainers
+pyproject.toml      @ifdd-de/maintainers
+Dockerfile*         @ifdd-de/maintainers
+*.Dockerfile        @ifdd-de/maintainers
+/LICENSE            @ifdd-de/maintainers
+/hooks/             @ifdd-de/maintainers
+/cookiecutter.json  @ifdd-de/maintainers
