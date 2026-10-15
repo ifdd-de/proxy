@@ -59,8 +59,10 @@ fi
 TLS=no
 grep -q "^  websecure:" "traefik/$([ "$MODE" = production ] && echo traefik.yml || echo traefik.development.yml)" && TLS=yes
 if [ "$MODE" = production ] && [ "$TLS" = yes ]; then
-  CERT=$(sed -n 's#^ *certFile: /certs/##p' traefik/dynamic/production/tls.yml)
-  KEY=$(sed -n 's#^ *keyFile: /certs/##p' traefik/dynamic/production/tls.yml)
+  # tls.yml names each file twice (certificates and the default store), once
+  # after a list dash: match both forms and keep the first name only.
+  CERT=$(sed -n 's#^[ -]*certFile: /certs/##p' traefik/dynamic/production/tls.yml | head -1)
+  KEY=$(sed -n 's#^[ -]*keyFile: /certs/##p' traefik/dynamic/production/tls.yml | head -1)
   if [ ! -f "certs/$CERT" ]; then
     openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=$HOST" \
       -addext "subjectAltName=DNS:$HOST" -keyout "certs/$KEY" -out "certs/$CERT" 2>/dev/null
