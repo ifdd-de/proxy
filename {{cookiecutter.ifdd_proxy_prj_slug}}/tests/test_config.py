@@ -180,7 +180,11 @@ def test_the_static_file_matching_the_compose_file_is_mounted(compose_file):
 @pytest.mark.parametrize("compose_file", COMPOSE_FILES)
 def test_dashboard_router_is_authenticated_and_inherits_tls(compose_file):
     labels = proxy_service(compose_file)["labels"]
-    assert "traefik.http.routers.dashboard.middlewares=dashboard-auth@file" in labels
+    # The router name comes from the project slug; find it by its service.
+    routers = [label.split(".")[3] for label in labels
+               if label.startswith("traefik.http.routers.") and label.endswith(".service=api@internal")]
+    assert len(routers) == 1, labels
+    assert f"traefik.http.routers.{routers[0]}.middlewares=dashboard-auth@file" in labels
     # A router tls section would replace the entry point TLS configuration,
     # including the Let's Encrypt resolver.
     assert not [label for label in labels if ".tls" in label]
@@ -328,6 +332,22 @@ def test_oauth2_proxy_trusts_a_ca_exactly_when_it_mounts_one():
     assert mount["source"] == "./certs/" + Path(ca_file).name
     assert mount["read_only"] is True
     assert mount["bind"]["create_host_path"] is False
+
+
+def test_oauth2_proxy_router_uses_the_service_of_its_own_labels():
+    """The fallback router names the service the same labels declare.
+
+    Services behind the proxy refer to that service as <name>@docker
+    (ifdd_wf_sso_service of ifdd-de/wf).
+    """
+    service = oauth2_proxy_service()
+    if service is None:
+        pytest.skip("no oauth2-proxy in this instance")
+    labels = service["labels"]
+    declared = {label.split(".")[3] for label in labels if label.startswith("traefik.http.services.")}
+    used = {label.split("=", 1)[1] for label in labels
+            if label.startswith("traefik.http.routers.") and ".service=" in label}
+    assert len(declared) == 1 and used == declared, labels
 
 
 def test_oauth2_proxy_has_a_health_check_its_image_can_run():

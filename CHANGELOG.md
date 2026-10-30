@@ -2,6 +2,25 @@
 
 The version scheme follows the other IFDD templates: `YY.MM.N`.
 
+## [Unreleased]
+
+- Traefik names follow the project slug (`ifdd_proxy_prj_slug`) instead of
+  fixed names: the dashboard router is `<slug>-dashboard` (was `dashboard`),
+  router and service of oauth2-proxy are `<slug>-oauth2-proxy` (were
+  `oauth2-proxy`). Services behind the login gate refer to
+  `<slug>-oauth2-proxy@docker` (in ifdd-de/wf: `ifdd_wf_sso_service`); the
+  login gate page shows the name. `tests/check_traefik.py` checks the names
+  for every fixture; the instance tests find the dashboard router by its
+  service and check that the oauth2-proxy router uses its own service.
+- Security page: the Docker provider has no constraints, so a second proxy on
+  the same Docker host would see the labels of this one (not verified).
+- Upgrade: `cruft update`, then recreate the containers
+  (`docker compose -f docker-compose-production.yml up -d`). Services that
+  use `oauth2-proxy@docker` (wf: `cruft update --variables-to-update
+  '{"ifdd_wf_sso_service": "<slug>-oauth2-proxy@docker"}'`) and own
+  configuration in `traefik/private` that names `dashboard@docker` or
+  `oauth2-proxy@docker` must use the new names.
+
 ## [26.10.2] - 2026-10-14
 
 - Documentation of the instance in `docs/en` and `docs/de` (Sphinx sources,

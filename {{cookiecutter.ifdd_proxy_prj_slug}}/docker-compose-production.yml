@@ -13,9 +13,9 @@ services:
       - "--configFile=/etc/traefik/traefik.yml"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`${IFDD_PROXY_DASHBOARD_HOST}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
-      - "traefik.http.routers.dashboard.service=api@internal"
-      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@file"
+      - "traefik.http.routers.{{ cookiecutter.ifdd_proxy_prj_slug }}-dashboard.rule=Host(`${IFDD_PROXY_DASHBOARD_HOST}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.routers.{{ cookiecutter.ifdd_proxy_prj_slug }}-dashboard.service=api@internal"
+      - "traefik.http.routers.{{ cookiecutter.ifdd_proxy_prj_slug }}-dashboard.middlewares=dashboard-auth@file"
     networks:
 {%- if internal_hosts %}
       proxy:
@@ -104,7 +104,8 @@ services:
     # A service opts in with a forwardAuth middleware on its own router:
     #   address: http://oauth2-proxy:4180/?allowed_groups=<keycloak group>
     # and a router Host(`<its host>`) && PathPrefix(`/oauth2/`) to the service
-    # oauth2-proxy@docker. Answers 202 for members of the group, sends
+    # {{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy@docker (named after the slug, like the
+    # routers of this file). Answers 202 for members of the group, sends
     # everybody else to Keycloak (or 403). See README, "oauth2-proxy".
     environment:
       OAUTH2_PROXY_PROVIDER: "keycloak-oidc"
@@ -156,14 +157,14 @@ services:
       start_period: 30s
     labels:
       - "traefik.enable=true"
-      - "traefik.http.services.oauth2-proxy.loadbalancer.server.port=4180"
+      - "traefik.http.services.{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy.loadbalancer.server.port=4180"
       # Fallback route for the login callback on every host. Lowest priority:
       # a service's own /oauth2/ router (see above) wins on its host. Also
       # keeps Traefik from creating its default Host(`<container>`) router.
-      - "traefik.http.routers.oauth2-proxy.rule=PathPrefix(`/oauth2/`)"
-      - "traefik.http.routers.oauth2-proxy.priority=1"
-      - "traefik.http.routers.oauth2-proxy.entrypoints=websecure"
-      - "traefik.http.routers.oauth2-proxy.service=oauth2-proxy"
+      - "traefik.http.routers.{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy.rule=PathPrefix(`/oauth2/`)"
+      - "traefik.http.routers.{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy.priority=1"
+      - "traefik.http.routers.{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy.entrypoints=websecure"
+      - "traefik.http.routers.{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy.service={{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy"
     networks:
       - proxy
     read_only: true

@@ -58,7 +58,7 @@ travel in plain text; use it only on a trusted network.
 
 ## Dashboard
 
-- Served only through the router `dashboard` on `IFDD_PROXY_DASHBOARD_HOST`,
+- Served only through the router `{{ cookiecutter.ifdd_proxy_prj_slug }}-dashboard` on `IFDD_PROXY_DASHBOARD_HOST`,
   with basic authentication (`dashboard-auth`, users in
   `secrets/dashboard.htpasswd`); `api.insecure` is off, so there is no
   unauthenticated port 8080. The credentials are not forwarded to the
@@ -105,6 +105,17 @@ proxy.
 
 Containers are not exposed by default (`exposedByDefault: false`): only
 services with `traefik.enable=true` get a router.
+
+Router, service and middleware names come from the project slugs of the
+instances (here `{{ cookiecutter.ifdd_proxy_prj_slug }}-dashboard`, `{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy`), so that the names of
+two instances do not collide. The Docker provider has no constraints,
+though: a second proxy on the same Docker host would also see the containers
+and labels of this one, including its dashboard router, and the other way
+round. Two proxies on one host need provider constraints first.
+
+```{note}
+Not verified: two proxies on one Docker host.
+```
 
 ## Security headers
 {%- if headers %}

@@ -62,12 +62,12 @@ Beispiel):
 - "traefik.http.middlewares.<svc>-sso.forwardauth.trustForwardHeader=true"
 - "traefik.http.routers.<svc>.middlewares=<svc>-sso"
 - "traefik.http.routers.<svc>-oauth2.rule=Host(`<host>`) && PathPrefix(`/oauth2/`)"
-- "traefik.http.routers.<svc>-oauth2.service=oauth2-proxy@docker"
+- "traefik.http.routers.<svc>-oauth2.service={{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy@docker"
 ```
 
 Die forwardAuth-Adresse geht direkt an den Container. Der Router
 `<svc>-oauth2` bedient den Login-Callback auf dem Host des Dienstes; ohne ihn
-übernimmt der Ersatz-Router `oauth2-proxy` (`PathPrefix(/oauth2/)`, Priorität
+übernimmt der Ersatz-Router `{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy` (`PathPrefix(/oauth2/)`, Priorität
 1), den es nur gibt, solange oauth2-proxy healthy ist. Abmelden:
 `https://<host>/oauth2/sign_out`.
 
