@@ -23,7 +23,7 @@ private dynamic configuration) out of every later `cruft update`.
 | Variable | Default | Meaning |
 |---|---|---|
 | `ifdd_proxy_prj_name`, `ifdd_proxy_prj_slug` | `IFDD Proxy`, derived | name and directory of the instance |
-| `ifdd_proxy_traefik_version` | `v3.7.13` | tag of the upstream `traefik` image |
+| `ifdd_proxy_traefik_version` | `v3.7.16` | tag of the upstream `traefik` image |
 | `ifdd_proxy_host` | `proxy` | dashboard host (default for `IFDD_PROXY_DASHBOARD_HOST` in `.env`) |
 | `ifdd_proxy_dashboard_user` | `admin` | dashboard user; the post-generation hook generates its password into `.env` and `secrets/dashboard.htpasswd` |
 | `ifdd_proxy_port`, `ifdd_proxy_tls_port` | `80`, `443` | host ports (defaults in `.env`) |

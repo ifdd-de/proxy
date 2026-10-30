@@ -1,7 +1,7 @@
 {
   "ifdd_proxy_prj_name": "IFDD Proxy",
   "ifdd_proxy_prj_slug": "{{ cookiecutter.ifdd_proxy_prj_name|lower|replace(' ', '_') }}",
-  "ifdd_proxy_traefik_version": "v3.7.13",
+  "ifdd_proxy_traefik_version": "v3.7.16",
   "ifdd_proxy_host": "proxy",
   "ifdd_proxy_dashboard_user": "admin",
   "ifdd_proxy_port": "80",
