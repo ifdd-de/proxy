@@ -60,12 +60,12 @@ Labels of a service behind the proxy (`ifdd-de/wf` has a complete example):
 - "traefik.http.middlewares.<svc>-sso.forwardauth.trustForwardHeader=true"
 - "traefik.http.routers.<svc>.middlewares=<svc>-sso"
 - "traefik.http.routers.<svc>-oauth2.rule=Host(`<host>`) && PathPrefix(`/oauth2/`)"
-- "traefik.http.routers.<svc>-oauth2.service=oauth2-proxy@docker"
+- "traefik.http.routers.<svc>-oauth2.service={{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy@docker"
 ```
 
 The forwardAuth address goes to the container directly. The router
 `<svc>-oauth2` serves the login callback on the service's host; without it
-the fallback router `oauth2-proxy` (`PathPrefix(/oauth2/)`, priority 1)
+the fallback router `{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy` (`PathPrefix(/oauth2/)`, priority 1)
 takes over, which exists only while oauth2-proxy is healthy. Sign-out:
 `https://<host>/oauth2/sign_out`.
 

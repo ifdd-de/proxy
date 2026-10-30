@@ -59,7 +59,7 @@ gehen im Klartext über das Netz; nur in einem vertrauenswürdigen Netz nutzen.
 
 ## Dashboard
 
-- Nur über den Router `dashboard` auf `IFDD_PROXY_DASHBOARD_HOST` ausgeliefert,
+- Nur über den Router `{{ cookiecutter.ifdd_proxy_prj_slug }}-dashboard` auf `IFDD_PROXY_DASHBOARD_HOST` ausgeliefert,
   mit Basic Authentication (`dashboard-auth`, Benutzer in
   `secrets/dashboard.htpasswd`); `api.insecure` ist aus, es gibt also keinen
   Port 8080 ohne Anmeldung. Die Anmeldedaten werden nicht an den
@@ -105,6 +105,18 @@ durch einen nur lesenden Socket-Proxy.
 
 Container sind nicht von sich aus erreichbar (`exposedByDefault: false`): Nur
 Dienste mit `traefik.enable=true` bekommen einen Router.
+
+Router-, Dienst- und Middleware-Namen kommen aus den Projekt-Slugs der
+Instanzen (hier `{{ cookiecutter.ifdd_proxy_prj_slug }}-dashboard`, `{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy`), damit die Namen
+zweier Instanzen nicht kollidieren. Der Docker-Provider hat aber keine
+Constraints: Ein zweiter Proxy auf demselben Docker-Host sähe auch die
+Container und Labels dieses Proxys, einschließlich seines Dashboard-Routers,
+und umgekehrt. Zwei Proxies auf einem Host brauchen zuerst Constraints für
+den Provider.
+
+```{note}
+Nicht geprüft: zwei Proxies auf einem Docker-Host.
+```
 
 ## Sicherheits-Header
 {%- if headers %}

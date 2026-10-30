@@ -15,9 +15,9 @@ services:
       - "--configFile=/etc/traefik/traefik.yml"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`${IFDD_PROXY_DASHBOARD_HOST}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
-      - "traefik.http.routers.dashboard.service=api@internal"
-      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@file"
+      - "traefik.http.routers.{{ cookiecutter.ifdd_proxy_prj_slug }}-dashboard.rule=Host(`${IFDD_PROXY_DASHBOARD_HOST}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.routers.{{ cookiecutter.ifdd_proxy_prj_slug }}-dashboard.service=api@internal"
+      - "traefik.http.routers.{{ cookiecutter.ifdd_proxy_prj_slug }}-dashboard.middlewares=dashboard-auth@file"
     networks:
 {%- if internal_hosts %}
       proxy:

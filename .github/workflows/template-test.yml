@@ -51,6 +51,9 @@ jobs:
       - name: The configured internal host names arrive in the instance
         run: python template/tests/check_internal_hosts.py template/tests/fixtures/${{ matrix.fixture }}.yaml "$INSTANCE"
 
+      - name: Traefik names follow the slug
+        run: python template/tests/check_traefik.py "$INSTANCE"
+
       - name: The generated dashboard password matches its htpasswd line
         run: python template/tests/check_dashboard_credentials.py template/tests/fixtures/${{ matrix.fixture }}.yaml "$INSTANCE"
 
@@ -133,6 +136,9 @@ jobs:
             echo "Rendered although the image has no wget for the health check" >&2
             exit 1
           fi
+
+      - name: Traefik names follow the slug
+        run: python template/tests/check_traefik.py "$INSTANCE"
 
       - name: The generated dashboard password matches its htpasswd line
         run: python template/tests/check_dashboard_credentials.py template/tests/fixtures/${{ matrix.fixture }}.yaml "$INSTANCE"
