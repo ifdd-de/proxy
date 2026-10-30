@@ -2,7 +2,10 @@
 
 The version scheme follows the other IFDD templates: `YY.MM.N`.
 
-## [Unreleased]
+## [26.10.3] - 2026-10-30
+
+- Traefik v3.7.16 (`ifdd_proxy_traefik_version`, was v3.7.13).
+- Documentation check: Sphinx 9.2.0 (`tests/docs/requirements.txt`).
 
 - Traefik names follow the project slug (`ifdd_proxy_prj_slug`) instead of
   fixed names: the dashboard router is `<slug>-dashboard` (was `dashboard`),
