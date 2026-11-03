@@ -36,6 +36,8 @@ enable_oauth2_proxy = "{{ cookiecutter.ifdd_proxy_enable_oauth2_proxy }}"
 oidc_issuer = "{{ cookiecutter.ifdd_proxy_oidc_issuer }}"
 oidc_client_id = "{{ cookiecutter.ifdd_proxy_oidc_client_id }}"
 oauth2_proxy_image = "{{ cookiecutter.ifdd_proxy_oauth2_proxy_image }}"
+oauth2_proxy_service = "{{ cookiecutter.ifdd_proxy_oauth2_proxy_service }}"
+gate_hosts = "{{ cookiecutter.ifdd_keycloak_proxy_gate_hosts }}"
 
 positive_integers = {
     "ifdd_proxy_port": "{{ cookiecutter.ifdd_proxy_port }}",
@@ -99,7 +101,22 @@ if not all(re.match(HOST_REGEX, host) for host in hosts) or len(set(hosts)) != l
         f"port or path, got {internal_hosts!r}"
     )
 
+gates = [part.strip() for part in gate_hosts.split(",") if part.strip()]
+if not all(re.match(HOST_REGEX, host) for host in gates) or len(set(gates)) != len(gates):
+    errors.append(
+        "ifdd_keycloak_proxy_gate_hosts: comma-separated, distinct host names without scheme, "
+        f"port or path, got {gate_hosts!r}"
+    )
+
 if enable_oauth2_proxy == "y":
+    # The Traefik service of oauth2-proxy; services behind the gate name it
+    # as <value>@docker. Like every Traefik name of this instance it starts
+    # with the slug, so two instances on one Docker host do not collide.
+    if not re.fullmatch(re.escape(project_slug) + r"-[A-Za-z0-9_-]+", oauth2_proxy_service):
+        errors.append(
+            f"ifdd_proxy_oauth2_proxy_service must be '{project_slug}-' followed by letters, digits, "
+            f"'_' or '-' (no '@docker'), got {oauth2_proxy_service!r}"
+        )
     if not re.fullmatch(r"https?://[^\s/]+(/[^\s]*)?", oidc_issuer) or oidc_issuer.endswith("/"):
         errors.append(f"ifdd_proxy_oidc_issuer must be the realm URL without trailing slash, got {oidc_issuer!r}")
     if not re.fullmatch(r"[A-Za-z0-9_.-]+", oidc_client_id):

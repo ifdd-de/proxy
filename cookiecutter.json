@@ -55,6 +55,8 @@
   "ifdd_proxy_oauth2_proxy_ca_file": "",
   "ifdd_proxy_oidc_issuer": "https://keycloak.example.org/realms/ifdd",
   "ifdd_proxy_oidc_client_id": "ifdd-proxy",
+  "ifdd_proxy_oauth2_proxy_service": "{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy",
+  "ifdd_keycloak_proxy_gate_hosts": "",
   "_copy_without_render": [
     ".github",
     "tests"

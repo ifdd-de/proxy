@@ -97,7 +97,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        fixture: [oauth2-proxy, oauth2-proxy-public-ca]
+        fixture: [oauth2-proxy, oauth2-proxy-public-ca, multi-server]
 
     steps:
       - uses: actions/checkout@v7
@@ -125,8 +125,26 @@ jobs:
             exit 1
           fi
 
-      - name: The configured CA file arrives in the instance
+      - name: CA file, Traefik service and allowed redirect hosts arrive in the instance
         run: python template/tests/check_oauth2_proxy.py template/tests/fixtures/${{ matrix.fixture }}.yaml "$INSTANCE"
+
+      - name: The pre-generation hook rejects a service name with a provider or another prefix
+        run: |
+          for value in "ifdd_proxy-oauth2-proxy@docker" "other-oauth2-proxy"; do
+            if cookiecutter --no-input --config-file template/tests/fixtures/oauth2-proxy.yaml \
+                --output-dir rejected template "ifdd_proxy_oauth2_proxy_service=$value"; then
+              echo "Rendered with ifdd_proxy_oauth2_proxy_service=$value" >&2
+              exit 1
+            fi
+          done
+
+      - name: The pre-generation hook rejects gate hosts with a scheme
+        run: |
+          if cookiecutter --no-input --config-file template/tests/fixtures/oauth2-proxy.yaml \
+              --output-dir rejected template "ifdd_keycloak_proxy_gate_hosts=https://wf.example.org"; then
+            echo "Rendered although a gate host has a scheme" >&2
+            exit 1
+          fi
 
       - name: The pre-generation hook rejects a distroless oauth2-proxy image
         run: |

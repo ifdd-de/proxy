@@ -45,6 +45,50 @@ dieser Reihenfolge.
 
 Traefik ignoriert Container, die (noch) nicht healthy sind: Ihre Router
 fehlen, bis der Healthcheck besteht.
+{%- if tls %}
+
+(ifdd-proxy-operations-check-hosts)=
+## Hostnamen prüfen
+
+`adm_check_hosts.sh` prüft, nur lesend, wie die Hostnamen dieses Servers ihre
+Dienste erreichen, besonders bei mehreren Servern
+({ref}`ifdd-proxy-setup-several-servers`). Auf jedem Server ausführen, sobald
+der Proxy läuft, und nach jeder Änderung an Hostnamen oder Zertifikaten:
+
+```bash
+./adm_check_hosts.sh                       # internal hosts, dashboard{% if o2 %}, realm{% endif %}
+./adm_check_hosts.sh --ca certs/<CA file> <further host> ...
+```
+
+| Prüfung | Scheitert, wenn |
+|---|---|
+| Netz-Aliase des laufenden Proxys in `{{ cookiecutter.ifdd_proxy_network }}` | ein Name aus `ifdd_proxy_internal_hosts` kein Alias ist: der Container ist älter als die Liste |
+| Alias: routet dieser Proxy ihn? | Traefik antwortet mit seinem eigenen `404 page not found`: der Dienst läuft woanders, der Name darf hier kein Alias sein |
+| kein Alias: DNS | keine Antwort, oder eine Loopback-Adresse (ein Container riefe sich selbst auf) |
+| TLS gegen die CA-Datei | die Kette führt nicht zur CA: Zwischen-CA nicht ausgeliefert oder eine andere CA; oder der Name steht nicht im Zertifikat |
+{%- if o2 %}
+| Discovery des Realms | ihr `issuer` weicht von `IFDD_PROXY_OIDC_ISSUER` in `.env` ab |
+{%- endif %}
+
+Die CA-Datei ist `--ca`{% if o2 and cookiecutter.ifdd_proxy_oauth2_proxy_ca_file %}, ohne Angabe
+`certs/{{ cookiecutter.ifdd_proxy_oauth2_proxy_ca_file }}`{% endif %}; ohne sie der Systemspeicher des
+Hosts. Für einen Alias verbindet sich das Skript mit diesem Proxy, wie es ein
+Container im Netz täte; für andere Namen nutzt es das DNS des Hosts.
+`HTTPS_PROXY` und `NO_PROXY` übergeht es, weil Container einander direkt
+aufrufen. Eine Zeile je Prüfung (`OK`, `WARN`, `FAIL`); Exit-Code 0, wenn
+nichts scheiterte, sonst 1, bei falschem Aufruf 2. Es braucht bash, curl,
+getent und die Docker-CLI; es ändert nichts und liest keine Secrets.
+
+Was es nicht prüft: den Zertifikatsspeicher der einzelnen Dienst-Images (er
+muss dieselbe CA enthalten, siehe die Dokumentation der Dienste) und die
+Namensauflösung in einem bestimmten Container.
+
+```{note}
+Nicht getestet: gegen ein echtes Docker-Netz. Geprüft mit Traefik v3.7.16,
+einer CA mit Zwischen-CA und einem nachgebildeten Realm unter einer anderen
+Adresse; die Netz-Aliase kamen von einer Attrappe der Docker-CLI.
+```
+{%- endif %}
 
 ## Änderungen übernehmen
 

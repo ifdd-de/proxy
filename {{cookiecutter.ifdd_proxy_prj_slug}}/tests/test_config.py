@@ -234,6 +234,11 @@ def test_cert_script_exists_exactly_with_own_certificates():
     assert CERT_SCRIPT.exists() == (tls_enabled() and not letsencrypt_enabled())
 
 
+def test_host_check_script_exists_exactly_with_tls():
+    """adm_check_hosts.sh checks host names over HTTPS (tests/test_check_hosts.py)."""
+    assert (ROOT / "adm_check_hosts.sh").exists() == tls_enabled()
+
+
 def test_cert_script_covers_the_internal_hosts():
     if not CERT_SCRIPT.exists():
         pytest.skip("no own certificates")

@@ -2,6 +2,35 @@
 
 The version scheme follows the other IFDD templates: `YY.MM.N`.
 
+## [Unreleased]
+
+- Several servers: the setup page has a section on installations whose
+  services run on several servers (only local hosts in
+  `ifdd_proxy_internal_hosts`, certificate chains with an intermediate CA,
+  start order); troubleshooting has rows for these cases.
+- `adm_check_hosts.sh` (with TLS): read-only check of the host names of this
+  server: network aliases of the running proxy, whether this proxy routes an
+  alias, DNS of the others (no loopback), TLS against a CA file, and the
+  issuer of the realm. Tests with stand-ins in `tests/test_check_hosts.py`.
+- New shared variable `ifdd_proxy_oauth2_proxy_service` (default
+  `<slug>-oauth2-proxy`, the name so far): the Traefik service of
+  oauth2-proxy. `ifdd-de/wf` takes the same variable, so both sides use one
+  value; a mismatch made Traefik drop the `/oauth2/` router of the service
+  and ended in a login loop. The pre-generation hook requires the slug prefix.
+- New shared variable `ifdd_keycloak_proxy_gate_hosts` (default empty, as in
+  `ifdd-de/keycloak`): oauth2-proxy sends the browser back to these hosts
+  after the login (`OAUTH2_PROXY_WHITELIST_DOMAINS`); before, it rejected
+  every absolute target and sent the browser to `/`.
+- Login gate page: the `/oauth2/` router of a service is required. Its
+  `Host(...)` router ranks above the fallback router, so without it the
+  callback passes the login again (the page said the fallback took over).
+- Fixture `multi-server`; `tests/check_oauth2_proxy.py` also checks the
+  service name and the allowed hosts.
+- Upgrade: `cruft update`. Existing instances keep their service name. For
+  the allowed hosts: `cruft update --variables-to-update
+  '{"ifdd_keycloak_proxy_gate_hosts": "<hosts>"}'`, then recreate
+  oauth2-proxy (`docker compose -f docker-compose-production.yml up -d`).
+
 ## [26.10.3] - 2026-10-30
 
 - Traefik v3.7.16 (`ifdd_proxy_traefik_version`, was v3.7.13).

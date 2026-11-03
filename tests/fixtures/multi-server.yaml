@@ -1,0 +1,14 @@
+# One of several servers: Keycloak runs on another server (stage-a), this
+# proxy (stage-b) routes only its own services. The internal host names are
+# therefore only the hosts of this server; the realm host resolves by DNS.
+# The CA file name is free; here a bundle of a root and an intermediate CA.
+default_context:
+  ifdd_proxy_prj_name: Example Proxy
+  ifdd_proxy_host: proxy.stage-b.example.test
+  ifdd_proxy_internal_hosts: "rest.stage-b.example.test, ui.stage-b.example.test, wf.stage-b.example.test"
+  ifdd_proxy_enable_oauth2_proxy: "y"
+  ifdd_proxy_oidc_issuer: https://id.stage-a.example.test/realms/realm-b
+  ifdd_proxy_oidc_client_id: example-proxy
+  ifdd_proxy_oauth2_proxy_ca_file: example-root-and-sub.pem
+  ifdd_proxy_oauth2_proxy_service: example_proxy-gate
+  ifdd_keycloak_proxy_gate_hosts: "wf.stage-b.example.test, ts.stage-b.example.test"

@@ -60,14 +60,35 @@ Labels of a service behind the proxy (`ifdd-de/wf` has a complete example):
 - "traefik.http.middlewares.<svc>-sso.forwardauth.trustForwardHeader=true"
 - "traefik.http.routers.<svc>.middlewares=<svc>-sso"
 - "traefik.http.routers.<svc>-oauth2.rule=Host(`<host>`) && PathPrefix(`/oauth2/`)"
-- "traefik.http.routers.<svc>-oauth2.service={{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy@docker"
+- "traefik.http.routers.<svc>-oauth2.service={{ cookiecutter.ifdd_proxy_oauth2_proxy_service }}@docker"
 ```
 
 The forwardAuth address goes to the container directly. The router
-`<svc>-oauth2` serves the login callback on the service's host; without it
-the fallback router `{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy` (`PathPrefix(/oauth2/)`, priority 1)
-takes over, which exists only while oauth2-proxy is healthy. Sign-out:
+`<svc>-oauth2` is required: it serves the login callback on the service's
+host. The service's own router `Host(<host>)` matches `/oauth2/callback` as
+well and ranks above the fallback router `{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy`
+(`PathPrefix(/oauth2/)`, priority 1); without `<svc>-oauth2` the callback
+passes the forwardAuth middleware again, which starts the next login: an
+endless loop. The fallback router serves only hosts without a router of
+their own, and only while oauth2-proxy is healthy. Sign-out:
 `https://<host>/oauth2/sign_out`.
+
+The Traefik service is named by `ifdd_proxy_oauth2_proxy_service`
+(this instance: `{{ cookiecutter.ifdd_proxy_oauth2_proxy_service }}`). The services behind the gate take
+the same shared variable (in `ifdd-de/wf` as well), so one line in
+`cookiecutter_all.yaml` keeps both sides equal. A router that names a
+service that does not exist is dropped by Traefik; its log says
+`the service "<name>@docker" does not exist`.
+
+## Back to the page after the login
+
+After the login oauth2-proxy sends the browser back to the page it came
+from, an absolute URL built from the `X-Forwarded-*` headers. It accepts only
+hosts listed in `ifdd_keycloak_proxy_gate_hosts`, the variable the
+`ifdd-de/keycloak` template takes for the redirect URIs of the client{% if cookiecutter.ifdd_keycloak_proxy_gate_hosts.strip() %}
+(this instance: `{{ cookiecutter.ifdd_keycloak_proxy_gate_hosts }}`){% endif %}. For any other
+host it logs `Rejecting invalid redirect ... domain / port not in whitelist`
+and sends the browser to `/` of the host instead.
 
 ## Operation
 

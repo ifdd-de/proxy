@@ -26,6 +26,9 @@ variable.
 | `certs/` | own certificates and keys, git-ignored |
 | `adm_01_certs.sh` | local CA and default certificate, once |
 {%- endif %}
+{%- if tls %}
+| `adm_check_hosts.sh` | read-only check of the host names of this server ({ref}`ifdd-proxy-operations-check-hosts`) |
+{%- endif %}
 {%- if le %}
 | `letsencrypt/` | ACME account and certificates (`acme.json`), git-ignored |
 {%- endif %}
