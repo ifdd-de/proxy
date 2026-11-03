@@ -26,6 +26,9 @@ Template-Variable ist.
 | `certs/` | eigene Zertifikate und Schlüssel, von Git ausgenommen |
 | `adm_01_certs.sh` | lokale CA und Standardzertifikat, einmalig |
 {%- endif %}
+{%- if tls %}
+| `adm_check_hosts.sh` | prüft die Hostnamen dieses Servers, nur lesend ({ref}`ifdd-proxy-operations-check-hosts`) |
+{%- endif %}
 {%- if le %}
 | `letsencrypt/` | ACME-Konto und Zertifikate (`acme.json`), von Git ausgenommen |
 {%- endif %}

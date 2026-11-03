@@ -96,6 +96,29 @@ docker network inspect {{ cookiecutter.ifdd_proxy_network }} --format {% raw %}'
 
 The address of the first command must be the proxy's.
 
+(ifdd-proxy-setup-several-servers)=
+### Several servers
+
+When the services of one installation run on several servers, every server
+has its own proxy, and some services (for example Keycloak, or schema, type
+and unit) run on one server only. Then:
+
+- `ifdd_proxy_internal_hosts` lists only the hosts that **this** proxy
+  routes. A name of a service on another server must not be an alias here:
+  containers would reach this proxy, which has no router for it, and get its
+  404. Without an alias the name resolves through DNS, as on the host, and
+  leads to the other server.
+- Every server's certificate must chain to the CA that the calling services
+  trust. When the certificates come from an intermediate CA, the certificate
+  file of the proxy holds the server certificate followed by the intermediate
+  CA; the services trust the root, or a bundle of root and intermediate.
+- The login gate needs the realm at start: start the server that runs
+  Keycloak first.
+{%- if tls %}
+- Check every server with `adm_check_hosts.sh` after the start and after
+  each change ({ref}`ifdd-proxy-operations-check-hosts`).
+{%- endif %}
+
 ## Certificates
 {%- if own %}
 

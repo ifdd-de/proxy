@@ -35,6 +35,9 @@ Known failure patterns, from setups of IFDD nodes. Start with
 |---|---|---|
 | a service cannot reach another one under its public URL, or reaches itself | the host name is not a network alias of the proxy | add it to `ifdd_proxy_internal_hosts` (`cruft update --variables-to-update`), recreate the proxy container |
 | `CERTIFICATE_VERIFY_FAILED` or `x509: certificate signed by unknown authority` in a service | the service does not trust the proxy's certificate | copy `certs/ca.crt` into `certs/` of that service, rebuild its image |
+| as above, although the service has the CA | the server sends its certificate without the intermediate CA | put the server certificate and then the intermediate CA into the certificate file of that server's proxy, restart it |
+| containers get 404 for a service on another server, the host reaches it | its name is an alias of this proxy (`ifdd_proxy_internal_hosts`), and this proxy has no router for it | remove the name from `ifdd_proxy_internal_hosts`, recreate the proxy container ({ref}`ifdd-proxy-setup-several-servers`) |
+| a name in `ifdd_proxy_internal_hosts` still resolves through DNS in containers | the proxy container was created with an older list | recreate it (`docker compose -f docker-compose-production.yml up -d proxy`) |
 | service-to-service HTTPS fails in development only | the self-signed certificate of the development variant | use the production variant |
 
 ## Limits
@@ -57,4 +60,6 @@ Known failure patterns, from setups of IFDD nodes. Start with
 | login refused: `email in id_token ... isn't verified` | the address is not marked as verified | turn "Email verified" on for the user |
 | members of the group get 403 | the group claim carries the full path (`/name`) | turn "Full group path" off in the mapper |
 | the container fails with a directory where a secret file was expected | `secrets/oauth2_proxy_*` did not exist; Docker mounted empty directories | create the files ({ref}`ifdd-proxy-login-gate`) |
+| endless login loop on a service; the Traefik log says `the service "<name>@docker" does not exist` | the `/oauth2/` router of the service names another service than `{{ cookiecutter.ifdd_proxy_oauth2_proxy_service }}`; Traefik drops it, and the callback passes the login again | the same `ifdd_proxy_oauth2_proxy_service` for this instance and the service, then `cruft update --variables-to-update` and recreate the service's containers |
+| after the login the browser lands on `/`; log: `Rejecting invalid redirect ... not in whitelist` | the host is missing in `ifdd_keycloak_proxy_gate_hosts` | add it, `cruft update --variables-to-update`, recreate oauth2-proxy |
 {%- endif %}

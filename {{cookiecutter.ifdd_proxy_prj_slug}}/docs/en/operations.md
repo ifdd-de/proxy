@@ -44,6 +44,50 @@ order.
 
 Traefik ignores containers that are not healthy (yet): their routers are
 missing until the health check passes.
+{%- if tls %}
+
+(ifdd-proxy-operations-check-hosts)=
+## Checking host names
+
+`adm_check_hosts.sh` checks, read-only, how the host names of this server
+reach their services, in particular with several servers
+({ref}`ifdd-proxy-setup-several-servers`). Run it on every server once the
+proxy runs, and after every change of host names or certificates:
+
+```bash
+./adm_check_hosts.sh                       # internal hosts, dashboard{% if o2 %}, realm{% endif %}
+./adm_check_hosts.sh --ca certs/<CA file> <further host> ...
+```
+
+| Check | Fails when |
+|---|---|
+| network aliases of the running proxy on `{{ cookiecutter.ifdd_proxy_network }}` | a name of `ifdd_proxy_internal_hosts` is no alias: the container is older than the list |
+| alias: does this proxy route it? | Traefik answers with its own `404 page not found`: the service runs elsewhere, the name must not be an alias here |
+| no alias: DNS | no answer, or a loopback address (a container would call itself) |
+| TLS against the CA file | the chain does not lead to the CA: intermediate CA not served, or another CA; or the name is not in the certificate |
+{%- if o2 %}
+| discovery of the realm | its `issuer` differs from `IFDD_PROXY_OIDC_ISSUER` in `.env` |
+{%- endif %}
+
+The CA file is `--ca`{% if o2 and cookiecutter.ifdd_proxy_oauth2_proxy_ca_file %}, by default
+`certs/{{ cookiecutter.ifdd_proxy_oauth2_proxy_ca_file }}`{% endif %}; without one, the system store of
+the host. For an alias the script connects to this proxy, as a container on
+the network would; for other names it uses DNS of the host. It ignores
+`HTTPS_PROXY` and `NO_PROXY`, because containers call each other directly.
+One line per check (`OK`, `WARN`, `FAIL`); exit code 0 when nothing failed,
+1 otherwise, 2 on wrong usage. It needs bash, curl, getent and the Docker
+CLI; it changes nothing and reads no secrets.
+
+What it does not check: the trust store of each service image (they must
+contain the same CA, see the documentation of the services) and the name
+resolution inside a particular container.
+
+```{note}
+Not tested: against a real Docker network. Checked with Traefik v3.7.16, a
+CA with an intermediate CA and a simulated realm on another address; the
+network aliases came from a stand-in for the Docker CLI.
+```
+{%- endif %}
 
 ## Applying changes
 

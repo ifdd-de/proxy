@@ -152,6 +152,8 @@ def main():
     if not ENABLE_TLS:
         remove("traefik/dynamic/production/tls.yml")
         remove("traefik/dynamic/development/tls.yml")
+        # Checks host names over HTTPS; without TLS there is nothing to check.
+        remove("adm_check_hosts.sh")
 
     if not ENABLE_TLS or ENABLE_LETSENCRYPT:
         # No own certificates: neither the key directory nor the list of

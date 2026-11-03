@@ -21,6 +21,9 @@ docker network create {{ cookiecutter.ifdd_proxy_network }}   # once per host, i
 {%- endif %}
 docker compose -f docker-compose-production.yml up -d
 docker compose -f docker-compose-production.yml ps
+{%- if tls %}
+./adm_check_hosts.sh                  # how the host names of this server reach their services
+{%- endif %}
 ```
 
 The dashboard is at `{{ "https" if tls else "http" }}://<IFDD_PROXY_DASHBOARD_HOST>/dashboard/`

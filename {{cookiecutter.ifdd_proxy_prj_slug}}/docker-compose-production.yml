@@ -3,6 +3,8 @@
 {%- set socket_proxy = cookiecutter.ifdd_proxy_enable_socket_proxy == "y" -%}
 {%- set internal_hosts = cookiecutter.ifdd_proxy_internal_hosts.split(",") | map("trim") | reject("equalto", "") | list -%}
 {%- set oauth2_proxy = cookiecutter.ifdd_proxy_enable_oauth2_proxy == "y" -%}
+{%- set gate_hosts = cookiecutter.ifdd_keycloak_proxy_gate_hosts.split(",") | map("trim") | reject("equalto", "") | list -%}
+{%- set o2p_service = cookiecutter.ifdd_proxy_oauth2_proxy_service -%}
 services:
   proxy:
     image: "traefik:{{ cookiecutter.ifdd_proxy_traefik_version }}"
@@ -104,9 +106,9 @@ services:
     # A service opts in with a forwardAuth middleware on its own router:
     #   address: http://oauth2-proxy:4180/?allowed_groups=<keycloak group>
     # and a router Host(`<its host>`) && PathPrefix(`/oauth2/`) to the service
-    # {{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy@docker (named after the slug, like the
-    # routers of this file). Answers 202 for members of the group, sends
-    # everybody else to Keycloak (or 403). See README, "oauth2-proxy".
+    # {{ o2p_service }}@docker (ifdd_proxy_oauth2_proxy_service, shared with
+    # the services behind the gate). Answers 202 for members of the group,
+    # sends everybody else to Keycloak (or 403). See README, "oauth2-proxy".
     environment:
       OAUTH2_PROXY_PROVIDER: "keycloak-oidc"
       OAUTH2_PROXY_OIDC_ISSUER_URL: "${IFDD_PROXY_OIDC_ISSUER:?set in .env}"
@@ -127,6 +129,12 @@ services:
       OAUTH2_PROXY_COOKIE_SECURE: "true"
       OAUTH2_PROXY_COOKIE_SAMESITE: "lax"
       OAUTH2_PROXY_SILENCE_PING_LOGGING: "true"
+{%- if gate_hosts %}
+      # After the login oauth2-proxy sends the browser back to the page it
+      # came from, an absolute URL built from X-Forwarded-*; it accepts only
+      # these hosts (ifdd_keycloak_proxy_gate_hosts), the others land on "/".
+      OAUTH2_PROXY_WHITELIST_DOMAINS: "{{ gate_hosts | join(',') }}"
+{%- endif %}
 {%- if cookiecutter.ifdd_proxy_oauth2_proxy_ca_file %}
       # oauth2-proxy calls the realm itself (discovery, token, keys); trust the
       # CA that signed its certificate, and the public CAs as before.
@@ -157,14 +165,14 @@ services:
       start_period: 30s
     labels:
       - "traefik.enable=true"
-      - "traefik.http.services.{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy.loadbalancer.server.port=4180"
+      - "traefik.http.services.{{ o2p_service }}.loadbalancer.server.port=4180"
       # Fallback route for the login callback on every host. Lowest priority:
       # a service's own /oauth2/ router (see above) wins on its host. Also
       # keeps Traefik from creating its default Host(`<container>`) router.
       - "traefik.http.routers.{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy.rule=PathPrefix(`/oauth2/`)"
       - "traefik.http.routers.{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy.priority=1"
       - "traefik.http.routers.{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy.entrypoints=websecure"
-      - "traefik.http.routers.{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy.service={{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy"
+      - "traefik.http.routers.{{ cookiecutter.ifdd_proxy_prj_slug }}-oauth2-proxy.service={{ o2p_service }}"
     networks:
       - proxy
     read_only: true

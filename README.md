@@ -53,12 +53,15 @@ private dynamic configuration) out of every later `cruft update`.
 The pre-generation hook rejects combinations that would render but not work:
 Let's Encrypt without TLS or without an e-mail address, malformed trusted IPs,
 non-numeric limits, malformed durations, malformed or repeated internal
-host names, and (with oauth2-proxy) a CA file given with a path.
+host names or gate hosts, and (with oauth2-proxy) a CA file given with a path
+or a Traefik service name that does not start with the slug.
 | `ifdd_proxy_enable_oauth2_proxy` | `n` | shared OIDC login gate (oauth2-proxy, Keycloak) for services behind the proxy; requires TLS |
 | `ifdd_proxy_oauth2_proxy_image` | `quay.io/oauth2-proxy/oauth2-proxy:v7.15.5-alpine` | oauth2-proxy image; must be an `-alpine` variant (the health check needs `wget`) |
 | `ifdd_proxy_oauth2_proxy_ca_file` | empty | CA certificate in `certs/` that signed the realm's certificate, e.g. `ca.crt` from `adm_01_certs.sh`; mounted alone into oauth2-proxy and trusted in addition to the system store. Empty: system store only (public certificates) |
 | `ifdd_proxy_oidc_issuer` | `https://keycloak.example.org/realms/ifdd` | Keycloak realm URL (default for `IFDD_PROXY_OIDC_ISSUER`) |
 | `ifdd_proxy_oidc_client_id` | `ifdd-proxy` | Keycloak client (default for `IFDD_PROXY_OIDC_CLIENT_ID`) |
+| `ifdd_proxy_oauth2_proxy_service` | `<slug>-oauth2-proxy` | Traefik service of oauth2-proxy; **shared** with the services behind the gate (`ifdd-de/wf`), which name it as `<value>@docker`; must start with the slug |
+| `ifdd_keycloak_proxy_gate_hosts` | empty | **shared** with `ifdd-de/keycloak`: comma-separated hosts behind the gate; oauth2-proxy sends the browser back to them after the login (`OAUTH2_PROXY_WHITELIST_DOMAINS`). Empty: back to `/` of the host |
 
 ## Layout
 
@@ -67,8 +70,9 @@ host names, and (with oauth2-proxy) a CA file given with a path.
 | `cookiecutter.json` | variables |
 | `hooks/` | validation before, clean-up after generation (removes files the chosen options do not use, creates `.env`, generates the dashboard password) |
 | `{{cookiecutter.ifdd_proxy_prj_slug}}/` | the instance, see its README |
-| `tests/fixtures/` | `defaults`, `letsencrypt` (staging, socket proxy, trusted IPs, TLS 1.2, `reject`), `plain-http` (no TLS, no DoS baseline), `internal-hosts` (network aliases, certificate script), `no-headers` (security headers off) |
+| `tests/fixtures/` | `defaults`, `letsencrypt` (staging, socket proxy, trusted IPs, TLS 1.2, `reject`), `plain-http` (no TLS, no DoS baseline), `internal-hosts` (network aliases, certificate script), `no-headers` (security headers off), `oauth2-proxy`, `oauth2-proxy-public-ca`, `multi-server` (one of several servers: the realm on another host, own service name, gate hosts, a CA bundle) |
 | `tests/check_internal_hosts.py` | used by `template-test.yml`: the host names of a fixture arrive as aliases in both compose files and in `adm_01_certs.sh` |
+| `tests/check_oauth2_proxy.py` | used by `template-test.yml`: CA file, Traefik service name and gate hosts of a fixture arrive in the oauth2-proxy service |
 | `tests/check_dashboard_credentials.py` | used by `template-test.yml`: user and generated password in `.env` match `secrets/dashboard.htpasswd` (checked with openssl), file modes |
 | `tests/check_docs.py`, `tests/docs/` | used by `template-test.yml`: the documentation of the instance, see below |
 

@@ -35,6 +35,9 @@ Bekannte Fehlerbilder aus Einrichtungen von IFDD-Knoten. Beginnen mit
 |---|---|---|
 | ein Dienst erreicht einen anderen unter dessen öffentlicher URL nicht, oder erreicht sich selbst | der Hostname ist kein Netz-Alias des Proxys | ihn in `ifdd_proxy_internal_hosts` eintragen (`cruft update --variables-to-update`), den Proxy-Container neu erzeugen |
 | `CERTIFICATE_VERIFY_FAILED` oder `x509: certificate signed by unknown authority` in einem Dienst | der Dienst vertraut dem Zertifikat des Proxys nicht | `certs/ca.crt` nach `certs/` dieses Dienstes kopieren, sein Image neu bauen |
+| wie oben, obwohl der Dienst die CA hat | der Server schickt sein Zertifikat ohne die Zwischen-CA | in die Zertifikatsdatei des Proxys dieses Servers das Serverzertifikat und danach die Zwischen-CA schreiben, ihn neu starten |
+| Container bekommen 404 für einen Dienst auf einem anderen Server, der Host erreicht ihn | sein Name ist ein Alias dieses Proxys (`ifdd_proxy_internal_hosts`), und dieser Proxy hat keinen Router dafür | den Namen aus `ifdd_proxy_internal_hosts` entfernen, den Proxy-Container neu erzeugen ({ref}`ifdd-proxy-setup-several-servers`) |
+| ein Name aus `ifdd_proxy_internal_hosts` löst in Containern weiter über DNS auf | der Proxy-Container wurde mit einer älteren Liste erzeugt | ihn neu erzeugen (`docker compose -f docker-compose-production.yml up -d proxy`) |
 | HTTPS zwischen Diensten scheitert nur in der Entwicklung | das selbstsignierte Zertifikat der Entwicklungsvariante | die Produktionsvariante nehmen |
 
 ## Grenzen
@@ -57,4 +60,6 @@ Bekannte Fehlerbilder aus Einrichtungen von IFDD-Knoten. Beginnen mit
 | Anmeldung abgewiesen: `email in id_token ... isn't verified` | die Adresse ist nicht als bestätigt markiert | „Email verified“ für den Benutzer einschalten |
 | Mitglieder der Gruppe bekommen 403 | der Gruppen-Claim trägt den vollen Pfad (`/name`) | „Full group path“ im Mapper ausschalten |
 | der Container scheitert an einem Verzeichnis, wo eine Secret-Datei erwartet wird | `secrets/oauth2_proxy_*` existierte nicht; Docker hat leere Verzeichnisse eingebunden | die Dateien anlegen ({ref}`ifdd-proxy-login-gate`) |
+| endlose Login-Schleife bei einem Dienst; das Traefik-Log meldet `the service "<name>@docker" does not exist` | der `/oauth2/`-Router des Dienstes nennt einen anderen Dienst als `{{ cookiecutter.ifdd_proxy_oauth2_proxy_service }}`; Traefik verwirft ihn, und der Callback läuft wieder durch den Login | dasselbe `ifdd_proxy_oauth2_proxy_service` für diese Instanz und den Dienst, dann `cruft update --variables-to-update` und die Container des Dienstes neu erzeugen |
+| nach dem Login landet der Browser auf `/`; Log: `Rejecting invalid redirect ... not in whitelist` | der Host fehlt in `ifdd_keycloak_proxy_gate_hosts` | ihn ergänzen, `cruft update --variables-to-update`, oauth2-proxy neu erzeugen |
 {%- endif %}
