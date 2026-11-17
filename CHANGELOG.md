@@ -2,7 +2,7 @@
 
 The version scheme follows the other IFDD templates: `YY.MM.N`.
 
-## [Unreleased]
+## [26.11.1] - 2026-11-14
 
 - Several servers: the setup page has a section on installations whose
   services run on several servers (only local hosts in
@@ -36,6 +36,8 @@ The version scheme follows the other IFDD templates: `YY.MM.N`.
   Graphviz instead of `sphinxcontrib-mermaid`. `tests/docs/get_plantuml.sh`
   downloads the pinned PlantUML jar (1.2026.10) for `tests/check_docs.py`; the
   template CI installs Java and Graphviz.
+- READMEs: a section on the use of large language models; the READMEs no
+  longer carry test reports.
 
 ## [26.10.3] - 2026-10-30
 
@@ -65,7 +67,7 @@ The version scheme follows the other IFDD templates: `YY.MM.N`.
   MyST Markdown): index, setup, build and release, operations, security,
   troubleshooting, reference, login gate. The pages show only what the chosen
   options produce. The instance README is now an entry point with a quick
-  start, the links, the honesty notes and the license; its former sections
+  start, the links and the license; its former sections
   moved into the documentation.
 - `docs/_build/` in `.gitignore` of the instance.
 - Template CI: `tests/check_docs.py` checks that both languages match and

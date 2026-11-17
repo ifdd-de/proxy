@@ -141,6 +141,5 @@ cruft update -y --variables-to-update \
 ```{note}
 Nicht getestet: das Login-Gate mit einem echten Keycloak und das
 Container-Image. Der Ablauf wurde mit dem Binary von oauth2-proxy 7.15.5,
-Traefik v3.7.13 und einem simulierten Realm geprüft (siehe die Honesty notes
-des Templates `ifdd-de/proxy`).
+Traefik v3.7.13 und einem simulierten Realm geprüft.
 ```
