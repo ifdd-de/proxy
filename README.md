@@ -92,7 +92,8 @@ an entry point that links to them.
 
 The pages have no `conf.py` of their own: they are meant to be copied into a
 Sphinx project that documents all services. That project needs `myst_parser`
-and `sphinxcontrib.mermaid`. Labels start with `ifdd-proxy-`; references to
+and `sphinxcontrib.plantuml` (PlantUML with Java and Graphviz).
+Labels start with `ifdd-proxy-`; references to
 `ifdd-instances-proxy` (the instance chapter of the meta repository) resolve
 only there.
 
@@ -111,6 +112,14 @@ headings per level in both languages, every label with the prefix, every
 reference to an own label resolvable, and a Sphinx build of each language
 with `-W` (configuration `tests/docs/conf.py`, versions
 `tests/docs/requirements.txt`).
+
+The check runs PlantUML, so it needs Java and Graphviz.
+`tests/docs/get_plantuml.sh` downloads the pinned PlantUML jar into the user
+cache, checks its SHA-256 and prints its path:
+
+```bash
+export IFDD_PLANTUML_JAR="$(tests/docs/get_plantuml.sh)"
+```
 
 ## CI
 

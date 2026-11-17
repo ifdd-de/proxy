@@ -36,20 +36,30 @@ labels, which Traefik reads from the Docker API.
 
 ## Architecture
 
-```{mermaid}
-flowchart LR
-  Client[Browsers and clients] -->|"ports {{ cookiecutter.ifdd_proxy_port }}{% if tls %}, {{ cookiecutter.ifdd_proxy_tls_port }}{% endif %}"| Traefik[proxy: Traefik]
-  Traefik -->|host name from labels| Services[services on {{ cookiecutter.ifdd_proxy_network }}]
-  Services -->|public URLs, network aliases| Traefik
+```{uml}
+@startuml
+left to right direction
+  rectangle "Browsers and clients" as Client
+  rectangle "proxy: Traefik" as Traefik
+  Client --> Traefik : ports {{ cookiecutter.ifdd_proxy_port }}{% if tls %}, {{ cookiecutter.ifdd_proxy_tls_port }}{% endif %}
+  rectangle "services on {{ cookiecutter.ifdd_proxy_network }}" as Services
+  Traefik --> Services : host name from labels
+  Services --> Traefik : public URLs, network aliases
 {%- if sp %}
-  Traefik -->|read-only| SocketProxy[socket proxy] --> Docker[Docker API]
+  rectangle "socket proxy" as SocketProxy
+  rectangle "Docker API" as Docker
+  Traefik --> SocketProxy : read-only
+  SocketProxy --> Docker
 {%- else %}
-  Traefik -->|socket| Docker[Docker API]
+  rectangle "Docker API" as Docker
+  Traefik --> Docker : socket
 {%- endif %}
 {%- if o2 %}
-  Traefik -->|forwardAuth| OAuth2[oauth2-proxy]
-  OAuth2 -->|OIDC| Traefik
+  rectangle "oauth2-proxy" as OAuth2
+  Traefik --> OAuth2 : forwardAuth
+  OAuth2 --> Traefik : OIDC
 {%- endif %}
+@enduml
 ```
 
 Services call each other under their public URLs as well, for example the
