@@ -70,7 +70,11 @@ jobs:
 
       - name: Documentation (docs/en, docs/de) matches and builds
         run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q default-jre-headless graphviz
           pip install -r template/tests/docs/requirements.txt
+          IFDD_PLANTUML_JAR="$(template/tests/docs/get_plantuml.sh)"
+          export IFDD_PLANTUML_JAR
           python template/tests/check_docs.py "$INSTANCE" --prefix ifdd-proxy-
 
       - name: Compose files are valid
@@ -167,7 +171,11 @@ jobs:
 
       - name: Documentation (docs/en, docs/de) matches and builds
         run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q default-jre-headless graphviz
           pip install -r template/tests/docs/requirements.txt
+          IFDD_PLANTUML_JAR="$(template/tests/docs/get_plantuml.sh)"
+          export IFDD_PLANTUML_JAR
           python template/tests/check_docs.py "$INSTANCE" --prefix ifdd-proxy-
 
       - name: Compose files are valid
