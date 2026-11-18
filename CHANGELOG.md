@@ -2,6 +2,13 @@
 
 The version scheme follows the other IFDD templates: `YY.MM.N`.
 
+## [26.11.2] - 2026-11-18
+
+- Security and troubleshooting pages (en, de): Java sends no server name for
+  host names without a dot, so `sniStrict` refuses Java clients that use
+  short names in production. Found by the integration run of `ifdd-de/meta`
+  (Git synchronisation of Kestra, `unrecognized_name`).
+
 ## [26.11.1] - 2026-11-14
 
 - Several servers: the setup page has a section on installations whose

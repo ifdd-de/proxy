@@ -21,7 +21,7 @@ Bekannte Fehlerbilder aus Einrichtungen von IFDD-Knoten. Beginnen mit
 |---|---|---|
 | ein Dienst bekommt 404 | kein Router: `traefik.enable=true` fehlt, der Container ist nicht in `{{ cookiecutter.ifdd_proxy_network }}`, er ist noch nicht healthy, oder eine genannte Middleware existiert nicht | Router im Dashboard und Labels des Dienstes prüfen |
 | ein Dienst wird ohne TLS ausgeliefert oder verliert sein Zertifikat | der Dienst setzt ein `tls`-Label am Router | jedes `...routers.<name>.tls...`-Label entfernen |
-| der TLS-Handshake scheitert für einen Hostnamen | `sniStrict`: kein Zertifikat deckt den Namen ab, oder der Client sendet keinen Servernamen | den Namen in ein Zertifikat aufnehmen (`traefik/private/certificates.yml` oder `adm_01_certs.sh` neu beginnen), neu starten |
+| der TLS-Handshake scheitert für einen Hostnamen | `sniStrict`: kein Zertifikat deckt den Namen ab, oder der Client sendet keinen Servernamen (Java sendet für Namen ohne Punkt keinen: `unrecognized_name`) | den Namen in ein Zertifikat aufnehmen (`traefik/private/certificates.yml` oder `adm_01_certs.sh` neu beginnen), neu starten |
 | eine Änderung in `traefik/dynamic/...` wirkt nicht | der File-Provider lädt Änderungen in den eingebundenen Unterverzeichnissen nicht neu | Proxy neu starten |
 | Browser warnen in der Entwicklung vor dem Zertifikat | die Entwicklungsvariante liefert das selbstsignierte Zertifikat von Traefik | erwartet; für HTTPS zwischen Diensten die Produktionsvariante nehmen |
 | Traefik meldet beim Start eine Warnung zu kodierten Zeichen | erwartet mit v3.7.13 | keine |
