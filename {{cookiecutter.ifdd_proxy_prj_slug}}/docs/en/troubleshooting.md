@@ -21,7 +21,7 @@ Known failure patterns, from setups of IFDD nodes. Start with
 |---|---|---|
 | a service gets 404 | no router: `traefik.enable=true` missing, the container is not on `{{ cookiecutter.ifdd_proxy_network }}`, it is not healthy yet, or a middleware it names does not exist | check the router in the dashboard and the labels of the service |
 | a service is served without TLS, or loses its certificate | the service sets a router `tls` label | remove every `...routers.<name>.tls...` label |
-| the TLS handshake fails for one host name | `sniStrict`: no certificate covers that name, or the client sends no server name | add the name to a certificate (`traefik/private/certificates.yml`, or start `adm_01_certs.sh` over), restart |
+| the TLS handshake fails for one host name | `sniStrict`: no certificate covers that name, or the client sends no server name (Java sends none for a name without a dot: `unrecognized_name`) | add the name to a certificate (`traefik/private/certificates.yml`, or start `adm_01_certs.sh` over), restart |
 | a change in `traefik/dynamic/...` has no effect | the file provider does not reload changes in the mounted subdirectories | restart the proxy |
 | browsers warn about the certificate in development | the development variant serves Traefik's self-signed certificate | expected; use the production variant for HTTPS between services |
 | Traefik logs a warning about encoded characters at start | expected with v3.7.13 | none |

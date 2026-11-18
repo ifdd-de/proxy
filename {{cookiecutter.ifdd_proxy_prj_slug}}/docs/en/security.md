@@ -30,7 +30,10 @@ protects, and what it does not:
   (`ifdd_proxy_tls_min_version`).
 - `sniStrict` in production: clients that send no server name, or one no
   certificate covers, are refused instead of getting the default
-  certificate.
+  certificate. Java sends no server name for a host name without a dot, so
+  short names such as `git` or `rest` fail for Java clients in production
+  (seen with the Git synchronisation of Kestra in `ifdd-de/wf`: `unrecognized_name`).
+  Give every host a name with a dot, e.g. `git.example.org`.
 - `strictTLSOptions`: two routers asking for different TLS options on the
   same host name fail instead of silently falling back to the default
   options.

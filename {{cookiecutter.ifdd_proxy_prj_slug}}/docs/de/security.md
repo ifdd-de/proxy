@@ -30,7 +30,11 @@ Was er schützt und was nicht:
   (`ifdd_proxy_tls_min_version`).
 - `sniStrict` in Produktion: Clients, die keinen Servernamen senden oder einen,
   den kein Zertifikat abdeckt, werden abgewiesen, statt das
-  Standardzertifikat zu bekommen.
+  Standardzertifikat zu bekommen. Java sendet für Hostnamen ohne Punkt keinen
+  Servernamen; Kurznamen wie `git` oder `rest` scheitern deshalb in Produktion
+  für Java-Clients (beobachtet bei der Git-Synchronisation von Kestra in
+  `ifdd-de/wf`: `unrecognized_name`). Jeder Host braucht einen Namen mit Punkt,
+  etwa `git.example.org`.
 - `strictTLSOptions`: Zwei Router, die für denselben Hostnamen verschiedene
   TLS-Optionen verlangen, scheitern, statt still auf die Standardoptionen
   zurückzufallen.
