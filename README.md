@@ -30,6 +30,7 @@ private dynamic configuration) out of every later `cruft update`.
 | `ifdd_proxy_log_level` | `WARN` | Traefik log level, production |
 | `ifdd_proxy_network` | `proxy-net` | Docker network the services join |
 | `ifdd_proxy_internal_hosts` | empty | comma-separated host names that containers on that network resolve to the proxy (network aliases), so services call each other under their public URLs; also the names `adm_01_certs.sh` puts into the certificate |
+| `ifdd_proxy_extra_networks` | empty | comma-separated further Docker networks the proxy joins, with the same aliases as on `ifdd_proxy_network`, for example the internal network of `ifdd-de/lab`; external, created by hand before the proxy starts. **Shared** with `ifdd-de/lab` as `ifdd_lab_network` (one entry here per lab instance) |
 | `ifdd_proxy_enable_security_headers` | `y` | response-header middlewares in `headers.yml`; each service attaches them (see the page `security` of the instance documentation) |
 | `ifdd_proxy_frame_options` | `SAMEORIGIN` | value of `X-Frame-Options` |
 | `ifdd_proxy_referrer_policy` | `no-referrer` | value of `Referrer-Policy` |

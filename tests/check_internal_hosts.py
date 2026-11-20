@@ -17,12 +17,26 @@ import yaml
 def main(fixture, instance):
     context = yaml.safe_load(Path(fixture).read_text())["default_context"]
     expected = [h.strip() for h in context.get("ifdd_proxy_internal_hosts", "").split(",") if h.strip()]
+    extras = [n.strip() for n in context.get("ifdd_proxy_extra_networks", "").split(",") if n.strip()]
     errors = []
     for compose_file in ("docker-compose-production.yml", "docker-compose-development.yml"):
-        networks = yaml.safe_load((Path(instance) / compose_file).read_text())["services"]["proxy"]["networks"]
+        data = yaml.safe_load((Path(instance) / compose_file).read_text())
+        networks = data["services"]["proxy"]["networks"]
         aliases = [] if isinstance(networks, list) else (networks["proxy"] or {}).get("aliases", [])
         if aliases != expected:
             errors.append(f"{compose_file}: aliases {aliases}, expected {expected}")
+        # Further networks (ifdd_proxy_extra_networks): joined, external, same aliases.
+        by_name = {v.get("name"): k for k, v in data["networks"].items()}
+        for name in extras:
+            key = by_name.get(name)
+            if key is None or data["networks"][key].get("external") is not True:
+                errors.append(f"{compose_file}: further network {name!r} missing or not external")
+                continue
+            joined = {} if isinstance(networks, list) else networks
+            if key not in joined:
+                errors.append(f"{compose_file}: the proxy does not join {name!r}")
+            elif (joined[key] or {}).get("aliases", []) != expected:
+                errors.append(f"{compose_file}: aliases on {name!r} {(joined[key] or {}).get('aliases')}, expected {expected}")
     script = Path(instance) / "adm_01_certs.sh"
     if script.exists():
         match = re.search(r'^INTERNAL_HOSTS="(.*)"$', script.read_text(), re.MULTILINE)

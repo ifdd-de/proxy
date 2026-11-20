@@ -22,22 +22,27 @@ if [ "$MODE" = production ] && grep -q "^certificatesResolvers:" traefik/traefik
   exit 0
 fi
 
-NETWORK=$(sed -n 's/^    name: //p' "docker-compose-$MODE.yml" | head -1)
-CREATED_NETWORK=no
+# The external networks: first the shared one, then the further ones
+# (ifdd_proxy_extra_networks), which are internal.
+mapfile -t NETWORKS < <(sed -n 's/^    name: //p' "docker-compose-$MODE.yml")
+CREATED_NETWORKS=()
 
 cleanup() {
   "${COMPOSE[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
   for file in "${CREATED[@]}"; do rm -f "$file"; done
-  [ "$CREATED_NETWORK" = yes ] && docker network rm "$NETWORK" >/dev/null 2>&1 || true
+  for network in "${CREATED_NETWORKS[@]}"; do docker network rm "$network" >/dev/null 2>&1 || true; done
 }
 trap cleanup EXIT
 
-# The shared network is external; create it only if it is missing, and
-# remove it afterwards only in that case.
-if ! docker network inspect "$NETWORK" >/dev/null 2>&1; then
-  docker network create "$NETWORK" >/dev/null
-  CREATED_NETWORK=yes
-fi
+# Create each only if it is missing, and remove it afterwards only in that case.
+for i in "${!NETWORKS[@]}"; do
+  network=${NETWORKS[$i]}
+  if ! docker network inspect "$network" >/dev/null 2>&1; then
+    if [ "$i" -eq 0 ]; then docker network create "$network" >/dev/null
+    else docker network create --internal "$network" >/dev/null; fi
+    CREATED_NETWORKS+=("$network")
+  fi
+done
 
 [ -f .env ] || { cp dotenv.dist .env; CREATED+=(.env); }
 export IFDD_PROXY_DASHBOARD_HOST=$HOST

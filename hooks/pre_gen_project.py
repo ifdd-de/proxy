@@ -19,6 +19,8 @@ letsencrypt_email = "{{ cookiecutter.ifdd_proxy_letsencrypt_email }}"
 trusted_ips = "{{ cookiecutter.ifdd_proxy_trusted_ips }}"
 enable_dos = "{{ cookiecutter.ifdd_proxy_enable_dos_baseline }}"
 internal_hosts = "{{ cookiecutter.ifdd_proxy_internal_hosts }}"
+extra_networks = "{{ cookiecutter.ifdd_proxy_extra_networks }}"
+proxy_network = "{{ cookiecutter.ifdd_proxy_network }}"
 oauth2_proxy_ca_file = "{{ cookiecutter.ifdd_proxy_oauth2_proxy_ca_file }}"
 dashboard_user = "{{ cookiecutter.ifdd_proxy_dashboard_user }}"
 
@@ -99,6 +101,14 @@ if not all(re.match(HOST_REGEX, host) for host in hosts) or len(set(hosts)) != l
     errors.append(
         "ifdd_proxy_internal_hosts: comma-separated, distinct host names without scheme, "
         f"port or path, got {internal_hosts!r}"
+    )
+
+extras = [part.strip() for part in extra_networks.split(",") if part.strip()]
+if (not all(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", name) for name in extras)
+        or len(set(extras)) != len(extras) or proxy_network in extras):
+    errors.append(
+        "ifdd_proxy_extra_networks: comma-separated, distinct Docker network names other than "
+        f"ifdd_proxy_network, got {extra_networks!r}"
     )
 
 gates = [part.strip() for part in gate_hosts.split(",") if part.strip()]

@@ -9,6 +9,7 @@
   "ifdd_proxy_log_level": "WARN",
   "ifdd_proxy_network": "proxy-net",
   "ifdd_proxy_internal_hosts": "",
+  "ifdd_proxy_extra_networks": "",
   "ifdd_proxy_memory_limit": "512M",
   "ifdd_proxy_enable_tls": "y",
   "ifdd_proxy_tls_min_version": [

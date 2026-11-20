@@ -230,6 +230,21 @@ def test_internal_hosts_are_the_same_in_both_compose_files():
     assert internal_hosts("docker-compose-production.yml") == internal_hosts("docker-compose-development.yml")
 
 
+@pytest.mark.parametrize("compose_file", ["docker-compose-production.yml", "docker-compose-development.yml"])
+def test_further_networks_are_external_and_carry_the_same_aliases(compose_file):
+    """ifdd_proxy_extra_networks: every further network the proxy joins is
+    external (owned by the service that needs it) and has the aliases of the
+    shared network, so containers there reach the services only through it."""
+    data = load(ROOT / compose_file)
+    shared = data["networks"]["proxy"]["name"]
+    networks = proxy_service(compose_file)["networks"]
+    joined = [] if isinstance(networks, list) else [k for k in networks if k not in ("proxy", "socket")]
+    for key in joined:
+        network = data["networks"][key]
+        assert network["external"] is True and network["name"] != shared
+        assert list((networks[key] or {}).get("aliases", [])) == internal_hosts(compose_file)
+
+
 def test_cert_script_exists_exactly_with_own_certificates():
     assert CERT_SCRIPT.exists() == (tls_enabled() and not letsencrypt_enabled())
 
