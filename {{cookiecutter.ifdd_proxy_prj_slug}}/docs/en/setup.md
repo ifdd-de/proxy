@@ -4,6 +4,7 @@
 {%- set le = cookiecutter.ifdd_proxy_enable_letsencrypt == "y" %}
 {%- set own = tls and not le %}
 {%- set internal_hosts = cookiecutter.ifdd_proxy_internal_hosts.split(",") | map("trim") | reject("equalto", "") | list %}
+{%- set extra_networks = cookiecutter.ifdd_proxy_extra_networks.split(",") | map("trim") | reject("equalto", "") | list %}
 
 ## Prerequisites
 
@@ -95,6 +96,22 @@ docker network inspect {{ cookiecutter.ifdd_proxy_network }} --format {% raw %}'
 ```
 
 The address of the first command must be the proxy's.
+
+(ifdd-proxy-setup-further-networks)=
+### Further networks
+
+A service whose containers must not sit on `{{ cookiecutter.ifdd_proxy_network }}`
+keeps them in an internal network of its own, for example the user servers
+of `ifdd-de/lab`. `ifdd_proxy_extra_networks` lists such networks: the proxy
+joins each with the same aliases as above, so the containers there reach the
+other services under their public URLs, and only through this proxy. This
+instance: {% if extra_networks %}{% for name in extra_networks %}`{{ name }}`{{ ", " if not loop.last else "." }}{% endfor %}{% else %}none.{% endif %}
+The networks belong to those services and must exist before the proxy starts;
+create each once:
+
+```bash
+docker network create --internal <network>
+```
 
 (ifdd-proxy-setup-several-servers)=
 ### Several servers

@@ -2,6 +2,15 @@
 
 The version scheme follows the other IFDD templates: `YY.MM.N`.
 
+## [Unreleased]
+
+- `ifdd_proxy_extra_networks` (default empty): further Docker networks the
+  proxy joins, each with the aliases of `ifdd_proxy_internal_hosts`, for
+  example the internal network of `ifdd-de/lab`, whose user servers reach
+  the other services only through the proxy. The networks are external and
+  created by hand. Setup page (en, de), README, a check of the fixture value
+  (`tests/check_internal_hosts.py`) and an instance test.
+
 ## [26.11.2] - 2026-11-18
 
 - Security and troubleshooting pages (en, de): Java sends no server name for

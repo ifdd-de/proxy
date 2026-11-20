@@ -1,6 +1,8 @@
 {%- set tls = cookiecutter.ifdd_proxy_enable_tls == "y" -%}
 {%- set le = cookiecutter.ifdd_proxy_enable_letsencrypt == "y" -%}
 {%- set socket_proxy = cookiecutter.ifdd_proxy_enable_socket_proxy == "y" -%}
+{%- set extra_networks = cookiecutter.ifdd_proxy_extra_networks.split(",") | map("trim") | reject("equalto", "") | list -%}
+{%- macro extra_key(name) %}extra_{{ name | replace("-", "_") | replace(".", "_") }}{% endmacro -%}
 {%- set internal_hosts = cookiecutter.ifdd_proxy_internal_hosts.split(",") | map("trim") | reject("equalto", "") | list -%}
 {%- set oauth2_proxy = cookiecutter.ifdd_proxy_enable_oauth2_proxy == "y" -%}
 {%- set gate_hosts = cookiecutter.ifdd_keycloak_proxy_gate_hosts.split(",") | map("trim") | reject("equalto", "") | list -%}
@@ -19,8 +21,9 @@ services:
       - "traefik.http.routers.{{ cookiecutter.ifdd_proxy_prj_slug }}-dashboard.service=api@internal"
       - "traefik.http.routers.{{ cookiecutter.ifdd_proxy_prj_slug }}-dashboard.middlewares=dashboard-auth@file"
     networks:
-{%- if internal_hosts %}
+{%- if internal_hosts or extra_networks %}
       proxy:
+{%- if internal_hosts %}
         # Containers on the shared network resolve these names to this proxy,
         # so services call each other under their public URLs and with the
         # proxy's certificate (ifdd_proxy_internal_hosts). Without an alias a
@@ -28,6 +31,19 @@ services:
         aliases:
 {%- for host in internal_hosts %}
           - "{{ host }}"
+{%- endfor %}
+{%- endif %}
+{%- for name in extra_networks %}
+      # Further network (ifdd_proxy_extra_networks), e.g. the internal one of
+      # ifdd-lab: the same aliases, so its containers reach the services only
+      # through this proxy.
+      {{ extra_key(name) }}:
+{%- if internal_hosts %}
+        aliases:
+{%- for host in internal_hosts %}
+          - "{{ host }}"
+{%- endfor %}
+{%- endif %}
 {%- endfor %}
 {%- if socket_proxy %}
       socket: {}
@@ -191,6 +207,13 @@ networks:
     # project owns it. Create it once: docker network create {{ cookiecutter.ifdd_proxy_network }}
     name: {{ cookiecutter.ifdd_proxy_network }}
     external: true
+{%- for name in extra_networks %}
+  {{ extra_key(name) }}:
+    # Owned by the service that needs it (e.g. ifdd-lab), created once:
+    #   docker network create --internal {{ name }}
+    name: {{ name }}
+    external: true
+{%- endfor %}
 {%- if socket_proxy %}
   socket:
     # Only the proxy and the socket proxy are attached; no route outside.
