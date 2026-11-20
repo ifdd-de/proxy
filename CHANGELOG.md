@@ -4,6 +4,9 @@ The version scheme follows the other IFDD templates: `YY.MM.N`.
 
 ## [Unreleased]
 
+- CI: GitHub Actions pinned to commit SHAs (version as comment),
+  `persist-credentials: false` on every checkout; the same in the workflows of
+  the instance.
 - `ifdd_proxy_extra_networks` (default empty): further Docker networks the
   proxy joins, each with the aliases of `ifdd_proxy_internal_hosts`, for
   example the internal network of `ifdd-de/lab`, whose user servers reach
