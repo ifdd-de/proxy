@@ -156,7 +156,7 @@ jobs:
         run: |
           if cookiecutter --no-input --config-file template/tests/fixtures/${{ matrix.fixture }}.yaml \
               --output-dir rejected template \
-              ifdd_proxy_oauth2_proxy_image=quay.io/oauth2-proxy/oauth2-proxy:v7.15.5; then
+              ifdd_proxy_oauth2_proxy_image=quay.io/oauth2-proxy/oauth2-proxy:v7.15.6; then
             echo "Rendered although the image has no wget for the health check" >&2
             exit 1
           fi

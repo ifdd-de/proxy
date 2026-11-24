@@ -23,7 +23,7 @@ private dynamic configuration) out of every later `cruft update`.
 | Variable | Default | Meaning |
 |---|---|---|
 | `ifdd_proxy_prj_name`, `ifdd_proxy_prj_slug` | `IFDD Proxy`, derived | name and directory of the instance |
-| `ifdd_proxy_traefik_version` | `v3.7.16` | tag of the upstream `traefik` image |
+| `ifdd_proxy_traefik_version` | `v3.8.0` | tag of the upstream `traefik` image |
 | `ifdd_proxy_host` | `proxy` | dashboard host (default for `IFDD_PROXY_DASHBOARD_HOST` in `.env`) |
 | `ifdd_proxy_dashboard_user` | `admin` | dashboard user; the post-generation hook generates its password into `.env` and `secrets/dashboard.htpasswd` |
 | `ifdd_proxy_port`, `ifdd_proxy_tls_port` | `80`, `443` | host ports (defaults in `.env`) |
@@ -57,7 +57,7 @@ non-numeric limits, malformed durations, malformed or repeated internal
 host names or gate hosts, and (with oauth2-proxy) a CA file given with a path
 or a Traefik service name that does not start with the slug.
 | `ifdd_proxy_enable_oauth2_proxy` | `n` | shared OIDC login gate (oauth2-proxy, Keycloak) for services behind the proxy; requires TLS |
-| `ifdd_proxy_oauth2_proxy_image` | `quay.io/oauth2-proxy/oauth2-proxy:v7.15.5-alpine` | oauth2-proxy image; must be an `-alpine` variant (the health check needs `wget`) |
+| `ifdd_proxy_oauth2_proxy_image` | `quay.io/oauth2-proxy/oauth2-proxy:v7.15.6-alpine` | oauth2-proxy image; must be an `-alpine` variant (the health check needs `wget`) |
 | `ifdd_proxy_oauth2_proxy_ca_file` | empty | CA certificate in `certs/` that signed the realm's certificate, e.g. `ca.crt` from `adm_01_certs.sh`; mounted alone into oauth2-proxy and trusted in addition to the system store. Empty: system store only (public certificates) |
 | `ifdd_proxy_oidc_issuer` | `https://keycloak.example.org/realms/ifdd` | Keycloak realm URL (default for `IFDD_PROXY_OIDC_ISSUER`) |
 | `ifdd_proxy_oidc_client_id` | `ifdd-proxy` | Keycloak client (default for `IFDD_PROXY_OIDC_CLIENT_ID`) |
@@ -141,6 +141,21 @@ own `tls` section replaces the TLS configuration of the entry point
 completely, including the Let's Encrypt resolver. Verified against Traefik
 v3.7.13. The `..._enable_tls`/`..._enable_letsencrypt` switches in `be`, `ui`
 and the other templates are therefore obsolete as far as labels go.
+
+## Honesty notes
+
+- Traefik v3.8.0 (the default since 26.11.11): the release binary was started
+  with the rendered configuration of the fixtures `defaults`, `internal-hosts`,
+  `multi-server`, `oauth2-proxy` and `no-headers`, its Docker provider fed by a
+  stand-in for the Docker API. Routers, middlewares and services came up
+  enabled exactly as with v3.7.16; the dashboard answered 200 with and 401
+  without login; HTTP redirected to HTTPS; a backend router answered over
+  HTTP/2 and TLS 1.3. Not checked with v3.8.0 outside the CI: a real Docker
+  host and Let's Encrypt.
+- oauth2-proxy v7.15.6: only its release notes were read (a patch release
+  with security fixes); the template CI starts the image.
+- The tag format of the socket-proxy image is unverified: ghcr.io was not
+  reachable from the test environment.
 
 ## AI assistance
 
