@@ -2,6 +2,15 @@
 
 The version scheme follows the other IFDD templates: `YY.MM.N`.
 
+## [26.11.11] - 2026-11-24
+
+- Version aligned across all ifdd-de repositories (26.11.11).
+- Upstream images: `ifdd_proxy_traefik_version` v3.7.16 -> v3.8.0,
+  `ifdd_proxy_oauth2_proxy_image` v7.15.5-alpine -> v7.15.6-alpine (security
+  fixes). The socket proxy stays at v0.5.0: from v0.6.0 on the project
+  publishes only the tags `lts`, `latest` and `3.4` (its README, "Image tags").
+- README: section "Honesty notes" (how v3.8.0 was checked).
+
 ## [26.11.3] - 2026-11-21
 
 - CI: GitHub Actions pinned to commit SHAs (version as comment),
